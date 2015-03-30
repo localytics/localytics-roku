@@ -6,7 +6,6 @@ Localytics library is contained in source/localytics/localytics.brs
 
 `m.LL = LL_Create("xxxxxxxxx-xxxxxxxxxxxxx-xxxxxxxx-xxxxxxxxxxxxxx", optional_session_timeout_in_seconds)`
 
-
 `...`
 
 
@@ -18,14 +17,15 @@ Localytics library is contained in source/localytics/localytics.brs
 
 `m.LL.SetCustomDimension(5, "testCD5")`
 
-
 `...`
 
 
 `'Before Recording, call Init will handle open/close session depending on optional_session_timeout_in_seconds set`
+
 `m.LL.Init()`
 
 `...`
+
 
 `'Start Tagging Event`
 
@@ -35,7 +35,6 @@ Localytics library is contained in source/localytics/localytics.brs
 
 `m.LL.TagEvent("RemoteKeyPressed", {location: "home", keyIndex: msg.GetIndex()})`
 
-
 `...`
 
 
@@ -44,6 +43,7 @@ Localytics library is contained in source/localytics/localytics.brs
 `m.LL.TagScreen("home")`
 
 `...`
+
 
 `'Keep Session Alive (optional). This is automatically called on TagEvent/TagScreen. Depending on usage, you can call this in event loops.`
 
