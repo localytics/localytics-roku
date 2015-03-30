@@ -204,6 +204,22 @@ End Function
 
 Function ll_process_outstanding_request()
     m.debugLog("ll_process_outstanding_request()")
+    
+    for each key in m.outstandingRequests
+        http = m.outstandingRequests[key]
+        if type(http) = "roUrlTransfer" then
+            port = http.GetMessagePort()
+            if type(port) = "roMessagePort" then
+                event = port.GetMessage()
+                if type(event) = "roUrlEvent"
+                    m.outstandingRequests.Delete(key)
+                    m.debugLog("process_done: " + event.GetString())
+                else
+                    m.debugLog("not_done: " + key)
+                end if
+            end if
+        end if
+    next
 End Function
 
 Function ll_persist_session()
