@@ -4,8 +4,14 @@ available as one of the "videoplayer" template in their brightscript eclipse plu
 http://sdkdocs.roku.com/display/sdkdoc/Developer+Guide#DeveloperGuide-12DevelopingwiththeRokuSDK
 http://sourceforge.net/projects/rokusdkexamples/files/videoplayer.zip/download
 
-Original Readme:
+To run:
+1. Add the latest localytics.brs library into /source
+2. a) zip up /images /source and manifest file, or
+b) export from eclipse with Brightscript plugin
+3. Deploy: http://sdkdocs.roku.com/display/sdkdoc/Developer+Guide#DeveloperGuide-70LoadingandRunningyourApplicationWalkthrough
 
+
+Original README.txt:
 
 The videoplayer example demonstrates a hierarchical,
 category based video playback application. The
