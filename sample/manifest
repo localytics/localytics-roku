@@ -1,0 +1,8 @@
+title=LocalyticsSample
+major_version=0
+minor_version=8
+build_version=20150331172907
+mm_icon_focus_hd=pkg:/images/MainMenu_Icon_CenterFocus_HD.png
+mm_icon_side_hd=pkg:/images/MainMenu_Icon_Side_HD.png
+mm_icon_focus_sd=pkg:/images/MainMenu_Icon_CenterFocus_SD.png
+mm_icon_side_sd=pkg:/images/MainMenu_Icon_Side_SD.png
