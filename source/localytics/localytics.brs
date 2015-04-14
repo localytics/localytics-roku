@@ -208,7 +208,7 @@ Function ll_process_outstanding_request()
     for each key in m.outstandingRequests
         http = m.outstandingRequests[key]
         if type(http) = "roUrlTransfer" then
-            port = http.GetMessagePort()
+            port = http.GetPort()
             if type(port) = "roMessagePort" then
                 event = port.GetMessage()
                 if type(event) = "roUrlEvent"

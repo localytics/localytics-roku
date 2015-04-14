@@ -19,4 +19,11 @@
 	<natures>
 		<nature>com.roku.brightscript.ide.eclipse.core.nature</nature>
 	</natures>
+	<linkedResources>
+		<link>
+			<name>source/localytics</name>
+			<type>2</type>
+			<locationURI>$%7BPARENT-1-PROJECT_LOC%7D/source/localytics</locationURI>
+		</link>
+	</linkedResources>
 </projectDescription>
