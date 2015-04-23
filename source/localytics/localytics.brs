@@ -30,6 +30,8 @@ Function LL_Create(appKey As String, sessionTimeout=0 As Integer, fresh=false As
     localytics.upload = ll_upload
     localytics.isPersistedAcrossSession = ll_is_persisted_across_session
     
+    localytics.screenViewed = ll_screen_viewed
+    
     ' Fields Creation
     localytics.endpoint = "http://webanalytics.localytics.com/api/v2/applications/"
     localytics.appKey = appKey
@@ -182,7 +184,29 @@ Function ll_tag_screen(name as String)
     
     m.setSessionValue(m.keys.screen_flows, screenFlows)
     
+    m.screenViewed(name) 'Auto-tag
+    
     m.debugLog("Screen Flows: " + m.getSessionValue(m.keys.screen_flows))
+End Function
+
+Function ll_screen_viewed(currentScreen as String)
+    lastScreen = m.lastScreen
+    lastScreenTimestamp = m.lastScreenTimestamp
+    
+    timestamp = ll_get_timestamp_generator()
+    time = timestamp.asSeconds()
+    if type(m.lastScreen) = "roString" and m.lastScreenTimestamp <> invalid then
+        attributes = CreateObject("roAssociativeArray")
+        attributes.currentScreen = currentScreen
+        attributes.previousScreen = lastScreen
+        attributes.timeOnScreen = time - lastScreenTimestamp
+        
+        name = "[Auto] Screen Viewed" 'Event name
+        m.TagEvent(name, attributes)
+    end if
+    
+    m.lastScreen = currentScreen
+    m.lastScreenTimestamp = time
 End Function
 
 Function ll_set_custom_dimension(i as Integer, value as String)
@@ -215,7 +239,7 @@ Function ll_process_outstanding_request()
                     m.outstandingRequests.Delete(key)
                     m.debugLog("process_done: " + event.GetString())
                 else
-                    m.debugLog("not_done: " + key)
+                    m.debugLog("process_not_done: " + key)
                 end if
             end if
         end if
