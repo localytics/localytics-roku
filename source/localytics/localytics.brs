@@ -13,6 +13,7 @@ Function LL_Create(appKey As String, sessionTimeout=0 As Integer, fresh=false As
     localytics.TagScreen = ll_tag_screen
     localytics.KeepSessionAlive = ll_keep_session_alive
     
+    localytics.SetContentMetadata = ll_set_content_metadata
     ' Shouldn't be call externally
     localytics.openSession = ll_open_session
     localytics.closeSession = ll_close_session
@@ -111,6 +112,9 @@ Function ll_close_session()
     lastActionTime = m.getSessionValue(m.keys.session_action_time)
     sessionTime = m.getSessionValue(m.keys.session_open_time)
 
+    ' Process previous session outstandings (auto-tags)
+    m.screenViewed("", lastActionTime)
+
     event = CreateObject("roAssociativeArray")
     event.dt = "c"
     event.u = ll_generate_guid()
@@ -189,24 +193,35 @@ Function ll_tag_screen(name as String)
     m.debugLog("Screen Flows: " + m.getSessionValue(m.keys.screen_flows))
 End Function
 
-Function ll_screen_viewed(currentScreen as String)
-    lastScreen = m.lastScreen
-    lastScreenTimestamp = m.lastScreenTimestamp
+Function ll_screen_viewed(currentScreen="" as String, lastActionTime=-1 as Integer)
+    m.debugLog("ll_screen_viewed()")
+
+    previousScreen = m.getSessionValue(m.keys.auto_previous_screen)
+    previousScreenTime = m.getSessionValue(m.keys.auto_previous_screen_time)
+
+    if lastActionTime > -1 then
+        time = lastActionTime
+    else
+        timestamp = ll_get_timestamp_generator()
+        time = timestamp.asSeconds()
+    end if
     
-    timestamp = ll_get_timestamp_generator()
-    time = timestamp.asSeconds()
-    if type(m.lastScreen) = "roString" and m.lastScreenTimestamp <> invalid then
+    if  previousScreen <> invalid and previousScreen.Len() > 0 and (type(previousScreenTime) = "roInteger" or type(previousScreenTime) = "Integer") then
         attributes = CreateObject("roAssociativeArray")
-        attributes.currentScreen = currentScreen
-        attributes.previousScreen = lastScreen
-        attributes.timeOnScreen = time - lastScreenTimestamp
+        if currentScreen.Len() > 0 then
+            attributes.currentScreen = currentScreen
+        end if
+        attributes.previousScreen = previousScreen
+        attributes.timeOnScreen = time - previousScreenTime
         
         name = "[Auto] Screen Viewed" 'Event name
+        m.debugLog("ll_screen_viewed(currentScreen: " + currentScreen + ", previousScreen: " + previousScreen + ", timeOnScreen: " + attributes.timeOnScreen.ToStr() + ")")
+        
         m.TagEvent(name, attributes)
     end if
     
-    m.lastScreen = currentScreen
-    m.lastScreenTimestamp = time
+    m.setSessionValue(m.keys.auto_previous_screen, currentScreen, false)
+    m.setSessionValue(m.keys.auto_previous_screen_time, time)
 End Function
 
 Function ll_set_custom_dimension(i as Integer, value as String)
@@ -215,6 +230,23 @@ Function ll_set_custom_dimension(i as Integer, value as String)
         cdKey = "c"+ i.ToStr()
         m.customDimensions[cdKey] = value
         ll_write_registry(cdKey, value, true)
+    end if
+End Function
+
+Function ll_set_content_metadata(key as String, value as String)
+    m.debugLog("ll_set_content_metadata("+ key + ", " + value + ")")
+    
+    ' Need to persist across sessions? 
+    if m.content <> invalid then
+        m.content = CreateObject("roAssociativeArray")
+    end if
+    
+    if type(key) = "roString"
+        if type(value) = "roString" and Len(value) > 0 then
+            m.content[key] = value
+        else
+            m.content.Delete(key) ' Remove the attribute if value is invalid or empty
+        end if
     end if
 End Function
 
@@ -266,6 +298,10 @@ Function ll_restore_session() As Boolean
     oldSession[m.keys.session_open_time] = ll_read_registry(m.keys.session_open_time).ToInt() 
     oldSession[m.keys.session_action_time] = ll_read_registry(m.keys.session_action_time).ToInt()  
     oldSession[m.keys.screen_flows] = ll_read_registry(m.keys.screen_flows)
+
+    ' auto-tag metrics
+    oldSession[m.keys.auto_previous_screen] = ll_read_registry(m.keys.auto_previous_screen)
+    oldSession[m.keys.auto_previous_screen_time] = ll_read_registry(m.keys.auto_previous_screen_time).ToInt()
     
     for i=0 to 9
         cdKey = "c" + i.ToStr()
@@ -363,7 +399,7 @@ Function ll_get_storage_keys() As Object
     keys.install_uuid = "iu"
     keys.event_store = "es" 'not used on web
     keys.current_header = "ch" 'not used on web
-    keys.device_birth_time = "pa" 'page laod time (not relevant
+    keys.device_birth_time = "pa" 'page load time (not relevant)
     keys.session_uuid = "csu"
     keys.session_open_time = "cst"
     keys.session_action_time = "ct"
@@ -375,6 +411,9 @@ Function ll_get_storage_keys() As Object
     keys.screen_flows = "fl"
     keys.custom_dimensions = "cd"
     keys.identifiers = "ids"
+    
+    keys.auto_previous_screen = "als" 'not used on web
+    keys.auto_previous_screen_time = "alst" 'not used on web
     
     return keys
 End Function
