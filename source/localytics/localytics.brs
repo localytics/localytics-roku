@@ -14,6 +14,7 @@ Function LL_Create(appKey As String, sessionTimeout=0 As Integer, fresh=false As
     localytics.KeepSessionAlive = ll_keep_session_alive
     
     localytics.SetContentMetadata = ll_set_content_metadata
+    localytics.ProcessPlayerMetrics = ll_process_player_metrics
     ' Shouldn't be call externally
     localytics.openSession = ll_open_session
     localytics.closeSession = ll_close_session
@@ -32,6 +33,7 @@ Function LL_Create(appKey As String, sessionTimeout=0 As Integer, fresh=false As
     localytics.isPersistedAcrossSession = ll_is_persisted_across_session
     
     localytics.screenViewed = ll_screen_viewed
+    localytics.sendPlayerMetrics = ll_send_player_metrics
     
     ' Fields Creation
     localytics.endpoint = "http://webanalytics.localytics.com/api/v2/applications/"
@@ -41,6 +43,9 @@ Function LL_Create(appKey As String, sessionTimeout=0 As Integer, fresh=false As
     localytics.customDimensions = localytics.loadCustomDimensions() 
     localytics.debug = debug 'Extra loggin on/off
     localytics.keys = ll_get_storage_keys()
+    localytics.constants = ll_get_constants()
+    
+    localytics.MetadataKey = ll_get_metadata_keys() 'Public constants
     
     if fresh then
         localytics.deleteSessionData(true)
@@ -114,7 +119,8 @@ Function ll_close_session()
 
     ' Process previous session outstandings (auto-tags)
     m.screenViewed("", lastActionTime)
-
+    m.sendPlayerMetrics()'Attempt to fire player metrics
+            
     event = CreateObject("roAssociativeArray")
     event.dt = "c"
     event.u = ll_generate_guid()
@@ -180,7 +186,7 @@ Function ll_tag_screen(name as String)
     
     screenFlows = m.getSessionValue(m.keys.screen_flows)
     
-    if type(screenFlows) <> "roString" and type(screenFlows) <> "String"
+    if not ll_is_string(screenFlows)
         screenFlows = Chr(34) + name + Chr(34)
     else
         screenFlows = screenFlows + "," + Chr(34) + name + Chr(34) 
@@ -206,7 +212,7 @@ Function ll_screen_viewed(currentScreen="" as String, lastActionTime=-1 as Integ
         time = timestamp.asSeconds()
     end if
     
-    if  previousScreen <> invalid and previousScreen.Len() > 0 and (type(previousScreenTime) = "roInteger" or type(previousScreenTime) = "Integer") then
+    if  ll_is_valid_string(previousScreen) and ll_is_integer(previousScreenTime) then
         attributes = CreateObject("roAssociativeArray")
         if currentScreen.Len() > 0 then
             attributes.currentScreen = currentScreen
@@ -214,10 +220,9 @@ Function ll_screen_viewed(currentScreen="" as String, lastActionTime=-1 as Integ
         attributes.previousScreen = previousScreen
         attributes.timeOnScreen = time - previousScreenTime
         
-        name = "[Auto] Screen Viewed" 'Event name
         m.debugLog("ll_screen_viewed(currentScreen: " + currentScreen + ", previousScreen: " + previousScreen + ", timeOnScreen: " + attributes.timeOnScreen.ToStr() + ")")
         
-        m.TagEvent(name, attributes)
+        m.TagEvent(m.constants.event_screen_viewed, attributes)
     end if
     
     m.setSessionValue(m.keys.auto_previous_screen, currentScreen, false)
@@ -233,22 +238,146 @@ Function ll_set_custom_dimension(i as Integer, value as String)
     end if
 End Function
 
-Function ll_set_content_metadata(key as String, value as String)
-    m.debugLog("ll_set_content_metadata("+ key + ", " + value + ")")
+' Sets Content Metadata for auto-tagging. If "value" is empty, the key is deleted.
+Function ll_set_content_metadata(key as String, value as Dynamic)
+    m.debugLog("ll_set_content_metadata("+ key + ", " + ll_to_string(value) + ")")
     
-    ' Need to persist across sessions? 
-    if m.content <> invalid then
-        m.content = CreateObject("roAssociativeArray")
-    end if
-    
-    if type(key) = "roString"
-        if type(value) = "roString" and Len(value) > 0 then
-            m.content[key] = value
+    if ll_is_string(key)
+        strValue = ll_to_string(value)
+        if ll_is_valid_string(strValue) then
+            ll_write_registry(key, strValue, true, m.constants.section_metadata)
         else
-            m.content.Delete(key) ' Remove the attribute if value is invalid or empty
+            ll_delete_registry(key, m.constants.section_metadata) ' Remove the attribute if value is invalid or empty
         end if
     end if
 End Function
+
+Function ll_process_player_metrics(event as Object)
+    m.debugLog("ll_process_player_metrics()")
+    if type(event) = "roVideoScreenEvent" or type(event) = "roVideoPlayerEvent" then
+        sectionName = m.constants.section_playback
+        
+        if event.isRequestFailed()
+            m.debugLog("ll_process_player_metrics(Type: isRequestFailed, Index: " + event.GetIndex().ToStr() + ", Message: " + event.GetMessage() + ")")
+            
+            ll_write_registry(m.keys.auto_playback_pending, "true", false, sectionName)
+            ll_write_registry(m.keys.auto_playback_url, event.GetInfo()["Url"], false, sectionName)
+            ll_write_registry(m.keys.auto_playback_end_reason, m.constants.finish_reason_playback_error, true, sectionName)
+        else if event.isStatusMessage()
+            m.debugLog("ll_process_player_metrics(Type: isStatusMessage, Message: " + event.GetMessage() + ")")
+        else if event.isPlaybackPosition() then
+            m.debugLog("ll_process_player_metrics(Type: isPlaybackPosition,  Index: " + event.GetIndex().ToStr() + ")")
+            
+            bufferTime = m.getSessionValue(m.keys.auto_playback_buffer_start)
+            if ll_is_integer(bufferTime) then
+                m.setSessionValue(m.keys.auto_playback_buffer_start, "")
+                timestamp = ll_get_timestamp_generator()
+                ll_write_registry(m.keys.auto_playback_buffer, (timestamp.asSeconds() - bufferTime).ToStr(), false, sectionName)
+            end if
+            
+            playbackPosition = event.GetIndex().ToStr()
+            
+            timeWatched = m.getSessionValue(m.keys.auto_playback_watched)
+            if (not ll_is_integer(timeWatched)) or playbackPosition > timeWatched then 'Same as MAX(timeWatched, playbackPosition)
+                m.setSessionValue(m.keys.auto_playback_watched, playbackPosition, true, false)
+                ll_write_registry(m.keys.auto_playback_watched, playbackPosition, false, sectionName)
+            end if
+            
+            ll_write_registry(m.keys.auto_playback_current_time, playbackPosition, true, sectionName)
+        else if event.isStreamStarted()
+            m.debugLog("ll_process_player_metrics(Type: isPlaybackPosition,  Index: " + event.GetIndex().ToStr() + ", Url: " + event.GetInfo()["Url"] + ")")
+            
+            IsUnderrun = event.GetInfo()["IsUnderrun"]
+            if IsUnderrun = false then
+                timestamp = ll_get_timestamp_generator()
+                m.setSessionValue(m.keys.auto_playback_buffer_start, timestamp.asSeconds())
+            else
+                m.setSessionValue(m.keys.auto_playback_buffer_start, "")
+            end if
+            
+            ll_write_registry(m.keys.auto_playback_pending, "true", false, sectionName)
+            ll_write_registry(m.keys.auto_playback_url, event.GetInfo()["Url"], true, sectionName)
+        else if event.isFullResult()
+            m.debugLog("ll_process_player_metrics(Type: isFullResult" + ")")
+            
+            ll_write_registry(m.keys.auto_playback_end_reason, m.constants.finish_reason_playback_ended, true, sectionName)
+        else if event.isPartialResult()
+            m.debugLog("ll_process_player_metrics(Type: isPartialResult" + ")")
+            
+            ll_write_registry(m.keys.auto_playback_end_reason, m.constants.finish_reason_user_exited, true, sectionName)
+        else if event.isStreamSegmentInfo()
+            m.debugLog("ll_process_player_metrics(Type: isStreamSegmentInfo, Index: " + event.GetIndex().ToStr() + ", SegUrl: " + event.GetInfo()["SegUrl"] + ")")
+        else if event.isPaused()
+            m.debugLog("ll_process_player_metrics(Type: isPaused" + ")")
+        else if event.isResumed()
+            m.debugLog("ll_process_player_metrics(Type: isResumed" + ")")
+        else if event.isScreenClosed()
+            m.debugLog("ll_process_player_metrics(Type: isScreenClosed" + ")")
+            
+            'Attempt to fire player metrics
+            m.sendPlayerMetrics()
+        else
+            m.debugLog("ll_process_player_metrics(Type: unexpected type)")
+        end if
+        
+    end if
+End Function
+
+Function ll_send_player_metrics()
+    m.debugLog("ll_send_player_metrics()")
+    
+    sectionName = m.constants.section_playback
+
+    if ll_read_registry(m.keys.auto_playback_pending, "false", sectionName) = "true" then
+        attributes = CreateObject("roAssociativeArray")
+        
+        ' Process metadata
+        sec = CreateObject("roRegistrySection", m.constants.section_metadata)
+        for each key in sec.GetKeyList()
+            attributes[key] = sec.Read(key)
+            sec.Delete(key)
+        next
+        sec.Flush()
+        
+        contentUrl = ll_read_registry(m.keys.auto_playback_url, m.constants.not_available, sectionName)
+        attributes[m.constants.content_url] = contentUrl
+        
+        endReason = ll_read_registry(m.keys.auto_playback_end_reason, m.constants.not_available, sectionName)
+        attributes[m.constants.content_did_reach_end] = ll_to_string(endReason = m.constants.finish_reason_playback_ended)
+        attributes[m.constants.end_reason] = endReason
+        
+        bufferTime = ll_read_registry(m.keys.auto_playback_buffer, m.constants.not_available, sectionName)
+        attributes[m.constants.content_time_to_buffer_seconds] = bufferTime
+        
+        contentLength = 0 'See if Length was passed in as part of metadata
+        if ll_is_valid_string(attributes[m.MetadataKey.length_seconds]) then
+            contentLength = attributes[m.MetadataKey.length_seconds].ToInt()
+        end if
+        
+        
+        playbackTime = ll_read_registry(m.keys.auto_playback_current_time, m.constants.not_available, sectionName)
+        attributes[m.constants.content_timestamp] = playbackTime
+        
+        timeWatched = ll_read_registry(m.keys.auto_playback_watched, m.constants.not_available, sectionName)
+        attributes[m.constants.content_played_seconds] = timeWatched
+        percentComplete = m.constants.not_available
+        if contentLength > 0 then
+            percentComplete = Int((timeWatched.ToInt()/contentLength)*100)
+        end if
+        attributes[m.constants.content_played_percent] = percentComplete
+        
+        m.TagEvent(m.constants.event_video_watched, attributes)
+        
+        ' Cleanup
+        ll_delete_registry(m.keys.auto_playback_pending, sectionName, false)
+        ll_delete_registry(m.keys.auto_playback_url, sectionName, false)
+        ll_delete_registry(m.keys.auto_playback_end_reason, sectionName, false)
+        ll_delete_registry(m.keys.auto_playback_buffer, sectionName, false)
+        ll_delete_registry(m.keys.auto_playback_current_time, sectionName, false)
+        ll_delete_registry(m.keys.auto_playback_watched, sectionName, true)
+    end if
+End Function
+
 
 Function ll_keep_session_alive()
     m.debugLog("ll_keep_session_alive()")
@@ -415,7 +544,46 @@ Function ll_get_storage_keys() As Object
     keys.auto_previous_screen = "als" 'not used on web
     keys.auto_previous_screen_time = "alst" 'not used on web
     
+    keys.auto_playback_pending = "app" 
+    keys.auto_playback_url = "apu"
+    keys.auto_playback_end_reason = "aper"
+    keys.auto_playback_watched = "apw"
+    keys.auto_playback_current_time = "apct"
+    keys.auto_playback_buffer = "apb"
+    keys.auto_playback_buffer_start = "apbs"
     return keys
+End Function
+
+Function ll_get_constants() As Object
+    constants = CreateObject("roAssociativeArray")
+    
+    constants.event_screen_viewed = "Screen Viewed"
+    constants.event_video_watched = "Video Watched"
+    
+    
+    constants.section_metadata = "com.localytics.metadata"
+    constants.section_playback = "com.localytics.playback"
+    constants.finish_reason_playback_ended = "Playback Ended"
+    constants.finish_reason_playback_error = "Playback Error"
+    constants.finish_reason_user_exited = "User Exited"
+    
+    constants.not_available = "N/A"
+    constants.content_url = "Content URL"
+    constants.content_length = "Content Length (Seconds)"
+    constants.content_played_seconds = "Content Played (Seconds)"
+    constants.content_played_percent = "Content Played (Percent)"
+    constants.content_did_reach_end = "Content Did Reach End"
+    constants.end_reason = "End Reason"
+    constants.content_time_to_buffer_seconds = "Content Time to Buffer (Seconds)"
+    constants.content_timestamp = "Content Timestamp"
+    return constants
+End Function
+
+' Constants exposed externally
+Function ll_get_metadata_keys() As Object
+    metadata = CreateObject("roAssociativeArray")
+    metadata.length_seconds = "Content Length (Seconds)"
+    return metadata
 End Function
 
 Function ll_is_persisted_across_session(storageKey) As Boolean    
@@ -442,7 +610,7 @@ Function ll_read_registry(key As String, default="" As String, section="com.loca
     return default
 End Function
 
-' Writes "value" to "key" of registry "section". "flush" = true will skip calling Flush, ideal for multiple writes
+' Writes "value" to "key" of registry "section". "flush" = false will skip calling Flush(), ideal for multiple writes
 Function ll_write_registry(key As String, value As String, flush=true As Boolean, section="com.localytics" As String)
     sec = CreateObject("roRegistrySection", section)
     sec.Write(key, value)
@@ -452,6 +620,15 @@ Function ll_write_registry(key As String, value As String, flush=true As Boolean
     end if
 End Function
 
+' Deletes "key" of registry "section". "flush" = false will skip calling Flush(), ideal for multiple deletes
+Function ll_delete_registry(key As String, section="com.localytics" As String, flush=true As Boolean)
+    sec = CreateObject("roRegistrySection", section)
+    sec.Delete(key)
+    
+    if flush then
+        sec.Flush()
+    end if
+End Function
 
 ' True if the instance has been initialized
 Function ll_has_session() As Boolean 
@@ -466,10 +643,13 @@ Function ll_get_session_value(param As String) As Dynamic
     
     return ""
 End Function
-Function ll_set_session_value(param As String, value As Dynamic, flush=false As Boolean)
+Function ll_set_session_value(param As String, value As Dynamic, flush=false As Boolean, persist=true As Boolean)
     if m.HasSession() AND param <> invalid AND value <> invalid then
         m["session"][param] = value
-        ll_write_registry(param, ll_to_string(value), flush)
+        
+        if persist then
+            ll_write_registry(param, ll_to_string(value), flush)
+        end if
     end if
 End Function
 
@@ -513,7 +693,7 @@ Function ll_set_params_as_string(params As Object) As String
             result = result + Chr(34) + key + Chr(34) + ":" + params[key] + ","
         else if type(params[key]) = "roAssociativeArray" then
             result = result + Chr(34) + key + Chr(34) + ":" + ll_set_params_as_string(params[key]) + ","
-        else if type(params[key]) = "roInteger" OR type(params[key]) = "Integer" then
+        else if ll_is_integer(params[key]) then
             result = result + Chr(34) + key + Chr(34) + ":" + (params[key]).ToStr() + ","
         else
             if params[key] = invalid or params[key] = "" then
@@ -530,7 +710,7 @@ Function ll_set_params_as_string(params As Object) As String
 End Function
 
 Function ll_to_string(variable As Dynamic) As String
-    if type(variable) = "roInt" or type(variable) = "roInteger" or type(variable) = "Integer"
+    if ll_is_integer(variable)
         return variable.ToStr()
     else if type(variable) = "roFloat" or type(variable) = "Float" then
         return Str(variable).Trim()
@@ -539,13 +719,26 @@ Function ll_to_string(variable As Dynamic) As String
             return "True"
         end if
         return "False"
-    else if type(variable) = "roString" or type(variable) = "String" then
+    else if ll_is_string(variable) then
         return variable
     else if type(variable) = "roArray"
         return FormatJson(variable)
     else
         return type(variable)
     end if
+End Function
+
+Function ll_is_integer(variable As Dynamic) As Boolean
+    return (type(variable) = "roInt" or type(variable) = "roInteger" or type(variable) = "Integer")
+End Function
+
+Function ll_is_string(variable As Dynamic) As Boolean
+    return (type(variable) = "roString" or type(variable) = "String")
+End Function
+
+' Valid string is of type "roString" or "String" and Length > 0
+Function ll_is_valid_string(variable As Dynamic) As Boolean
+    return (ll_is_string(variable) and variable.Len() > 0)
 End Function
 
 Function ll_debug_log(line as String)
