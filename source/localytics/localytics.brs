@@ -9,6 +9,7 @@ Function LL_Create(appKey As String, sessionTimeout=0 As Integer, fresh=false As
     ' Function for External Calls
     localytics.Init = ll_initialize
     localytics.SetCustomDimension = ll_set_custom_dimension
+    localytics.ClearCustomDimension = ll_clear_custom_dimension
     localytics.TagEvent = ll_tag_event
     localytics.TagScreen = ll_tag_screen
     localytics.KeepSessionAlive = ll_keep_session_alive
@@ -213,13 +214,15 @@ Function ll_screen_viewed(currentScreen="" as String, lastActionTime=-1 as Integ
     
     if  ll_is_valid_string(previousScreen) and ll_is_integer(previousScreenTime) then
         attributes = CreateObject("roAssociativeArray")
-        if currentScreen.Len() > 0 then
-            attributes.currentScreen = currentScreen
+        if currentScreen = "" then
+            currentScreen = m.constants.not_available
         end if
-        attributes.previousScreen = previousScreen
-        attributes.timeOnScreen = time - previousScreenTime
+        timeOnScreen = time - previousScreenTime
+        attributes[m.constants.current_screen] = currentScreen
+        attributes[m.constants.previous_screen] = previousScreen
+        attributes[m.constants.time_on_screen] = timeOnScreen
         
-        m.debugLog("ll_screen_viewed(currentScreen: " + currentScreen + ", previousScreen: " + previousScreen + ", timeOnScreen: " + attributes.timeOnScreen.ToStr() + ")")
+        m.debugLog("ll_screen_viewed(currentScreen: " + currentScreen + ", previousScreen: " + previousScreen + ", timeOnScreen: " + timeOnScreen.ToStr() + ")")
         
         m.TagEvent(m.constants.event_screen_viewed, attributes)
     end if
@@ -235,6 +238,11 @@ Function ll_set_custom_dimension(i as Integer, value as String)
         m.customDimensions[cdKey] = value
         ll_write_registry(cdKey, value, true)
     end if
+End Function
+
+Function ll_clear_custom_dimension(i as Integer)
+    m.debugLog("ll_clear_custom_dimension("+ i.toStr() + ")")
+    m.SetCustomDimension(i, "")
 End Function
 
 ' Sets Content Metadata for auto-tagging. If "value" is empty, the key is deleted.
@@ -353,7 +361,7 @@ Function ll_send_player_metrics()
         contentUrl = ll_read_registry(m.keys.auto_playback_url, m.constants.not_available, sectionName)
         attributes[m.constants.content_url] = contentUrl
         
-        endReason = ll_read_registry(m.keys.auto_playback_end_reason, m.constants.not_available, sectionName)
+        endReason = ll_read_registry(m.keys.auto_playback_end_reason, m.constants.finish_reason_unknown, sectionName)
         attributes[m.constants.content_did_reach_end] = ll_to_string(endReason = m.constants.finish_reason_playback_ended)
         attributes[m.constants.end_reason] = endReason
         
@@ -371,7 +379,11 @@ Function ll_send_player_metrics()
         
         percentComplete = m.constants.not_available
         if contentLength.ToInt() > 0 then
-            percentComplete = Int((timeWatched.ToInt()/contentLength.ToInt())*100)
+            if endReason = m.constants.finish_reason_playback_ended then
+                percentComplete = 100
+            else
+                percentComplete = Int((timeWatched.ToInt()/contentLength.ToInt())*100)
+            end if
         end if
         attributes[m.constants.content_played_percent] = percentComplete
         
@@ -579,10 +591,15 @@ Function ll_get_constants() As Object
     
     constants.section_metadata = "com.localytics.metadata"
     constants.section_playback = "com.localytics.playback"
+    
     constants.finish_reason_playback_ended = "Playback Ended"
     constants.finish_reason_playback_error = "Playback Error"
     constants.finish_reason_user_exited = "User Exited"
+    constants.finish_reason_unknown = "Unknown"
     
+    constants.current_screen = "Current Screen"
+    constants.previous_screen = "Previous Screen"
+    constants.time_on_screen = "Time On Screen (Seconds)"
     constants.not_available = "N/A"
     constants.content_url = "Content URL"
     constants.content_length = "Content Length (Seconds)"
