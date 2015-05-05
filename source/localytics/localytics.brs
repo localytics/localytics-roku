@@ -2,7 +2,7 @@
 ' Note: 
 ' - "fresh" will clear previous stored values
 ' - "debug" will log some messages
-Function LL_Create(appKey As String, sessionTimeout=0 As Integer, fresh=false As Boolean, debug=false As Boolean) As Object
+Function LL_Create(appKey As String, sessionTimeout=1800 As Integer, fresh=false As Boolean, debug=false As Boolean) As Object
 
     localytics = CreateObject("roAssociativeArray")
     
@@ -23,6 +23,7 @@ Function LL_Create(appKey As String, sessionTimeout=0 As Integer, fresh=false As
     localytics.deleteSessionData = ll_delete_session_data
     localytics.restoreSession = ll_restore_session
     localytics.persistSession = ll_persist_session
+    localytics.checkSessionTimeout = ll_check_session_timeout
     localytics.loadCustomDimensions = ll_load_custom_dimensions
     localytics.processOutStandingRequest = ll_process_outstanding_request
     localytics.hasSession = ll_has_session
@@ -64,7 +65,7 @@ Function ll_initialize()
     
     if not m.hasSession() then
         m.openSession()
-    else if currentTime-lastActionTime > m.sessionTimeout
+    else if currentTime-lastActionTime > 0
         m.debugLog("Session Timed Out")
         m.closeSession()
         m.openSession()
@@ -117,6 +118,8 @@ Function ll_close_session()
     lastActionTime = m.getSessionValue(m.keys.session_action_time)
     sessionTime = m.getSessionValue(m.keys.session_open_time)
 
+    m.KeepSessionAlive()
+    
     ' Process previous session outstandings (auto-tags)
     m.screenViewed("", lastActionTime)
     m.sendPlayerMetrics()'Attempt to fire player metrics
@@ -158,8 +161,8 @@ Function ll_tag_event(name as String, attributes=invalid as Object, customerValu
     if m.HasSession() = false then
         return -1
     end if
-    
-    m.KeepSessionAlive() 
+    m.checkSessionTimeout()
+    m.KeepSessionAlive()
 
     timestamp = ll_get_timestamp_generator()
 
@@ -182,6 +185,7 @@ End Function
 
 Function ll_tag_screen(name as String)
     m.debugLog("ll_tag_screen()")
+    m.checkSessionTimeout()
     m.KeepSessionAlive()
     
     screenFlows = m.getSessionValue(m.keys.screen_flows)
@@ -273,15 +277,16 @@ Function ll_process_player_metrics(event as Object)
     m.debugLog("ll_process_player_metrics()")
     if type(event) = "roVideoScreenEvent" or type(event) = "roVideoPlayerEvent" then
         sectionName = m.constants.section_playback
+        message = "Type: unexpected"
         
         if event.isRequestFailed()
-            m.debugLog("ll_process_player_metrics(Type: isRequestFailed, Index: " + event.GetIndex().ToStr() + ", Message: " + event.GetMessage() + ")")
+            message = "Type: isRequestFailed, Index: " + event.GetIndex().ToStr() + ", Message: " + event.GetMessage()
             
             ll_write_registry(m.keys.auto_playback_pending, "true", false, sectionName)
             ll_write_registry(m.keys.auto_playback_url, event.GetInfo()["Url"], false, sectionName)
             ll_write_registry(m.keys.auto_playback_end_reason, m.constants.finish_reason_playback_error, true, sectionName)
         else if event.isPlaybackPosition() then
-            m.debugLog("ll_process_player_metrics(Type: isPlaybackPosition,  Index: " + event.GetIndex().ToStr() + ")")
+            message = "Type: isPlaybackPosition,  Index: " + event.GetIndex().ToStr()
             
             bufferStartTime = m.getSessionValue(m.keys.auto_playback_buffer_start)
             bufferTime = m.getSessionValue(m.keys.auto_playback_buffer)
@@ -303,7 +308,7 @@ Function ll_process_player_metrics(event as Object)
             
             ll_write_registry(m.keys.auto_playback_current_time, playbackPosition, true, sectionName)
         else if event.isStreamStarted()
-            m.debugLog("ll_process_player_metrics(Type: isStreamStarted,  Index: " + event.GetIndex().ToStr() + ", Url: " + event.GetInfo()["Url"] + ")")
+            message = "Type: isStreamStarted,  Index: " + event.GetIndex().ToStr() + ", Url: " + event.GetInfo()["Url"]
             
             IsUnderrun = event.GetInfo()["IsUnderrun"]
             if IsUnderrun = false then
@@ -314,16 +319,17 @@ Function ll_process_player_metrics(event as Object)
             ll_write_registry(m.keys.auto_playback_pending, "true", false, sectionName)
             ll_write_registry(m.keys.auto_playback_url, event.GetInfo()["Url"], true, sectionName)
         else if event.isFullResult()
-            m.debugLog("ll_process_player_metrics(Type: isFullResult" + ")")
+            message = "Type: isFullResult"
             
             ll_write_registry(m.keys.auto_playback_end_reason, m.constants.finish_reason_playback_ended, true, sectionName)
         else if event.isPartialResult()
-            m.debugLog("ll_process_player_metrics(Type: isPartialResult" + ")")
+            message = "Type: isPartialResult"
             
             ll_write_registry(m.keys.auto_playback_end_reason, m.constants.finish_reason_user_exited, true, sectionName)
         else if event.isScreenClosed()
-            m.debugLog("ll_process_player_metrics(Type: isScreenClosed" + ")")
+            message = "Type: isScreenClosed"
             
+            ' Clear temporary values
             m.setSessionValue(m.keys.auto_playback_buffer, "", false, false)
             m.setSessionValue(m.keys.auto_playback_buffer_start, "", false, false)
             m.setSessionValue(m.keys.auto_playback_watched, "", false, false)
@@ -337,15 +343,16 @@ Function ll_process_player_metrics(event as Object)
 '            m.debugLog("ll_process_player_metrics(Type: isResumed" + ")")
 '        else if event.isStatusMessage()
 '            m.debugLog("ll_process_player_metrics(Type: isStatusMessage, Message: " + event.GetMessage() + ")")
-
 '        else
 '            m.debugLog("ll_process_player_metrics(Type: unexpected type)")
         end if
+        m.debugLog("ll_process_player_metrics(" + message + ")")
     end if
 End Function
 
 Function ll_send_player_metrics()
     m.debugLog("ll_send_player_metrics()")
+    m.checkSessionTimeout()
     
     sectionName = m.constants.section_playback
 
@@ -412,6 +419,17 @@ Function ll_keep_session_alive()
     timestamp = ll_get_timestamp_generator()
     m.setSessionValue(m.keys.session_action_time, timestamp.asSeconds())
     m.processOutStandingRequest()
+End Function
+
+Function ll_check_session_timeout()
+    m.debugLog("ll_check_session_timeout")
+    currentTime = ll_get_timestamp_generator().asSeconds()
+    lastActionTime = m.getSessionValue(m.keys.session_action_time)
+    
+    if currentTime-lastActionTime > m.sessionTimeout
+        m.closeSession()
+        m.openSession()
+    end if
 End Function
 
 Function ll_process_outstanding_request()
