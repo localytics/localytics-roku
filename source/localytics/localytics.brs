@@ -118,7 +118,7 @@ Function ll_close_session()
     lastActionTime = m.getSessionValue(m.keys.session_action_time)
     sessionTime = m.getSessionValue(m.keys.session_open_time)
 
-    m.KeepSessionAlive()
+    m.KeepSessionAlive("ll_close_session")
     
     ' Process previous session outstandings (auto-tags)
     m.screenViewed("", lastActionTime)
@@ -162,7 +162,7 @@ Function ll_tag_event(name as String, attributes=invalid as Object, customerValu
         return -1
     end if
     m.checkSessionTimeout()
-    m.KeepSessionAlive()
+    m.KeepSessionAlive("ll_tag_event")
 
     timestamp = ll_get_timestamp_generator()
 
@@ -186,7 +186,7 @@ End Function
 Function ll_tag_screen(name as String)
     m.debugLog("ll_tag_screen()")
     m.checkSessionTimeout()
-    m.KeepSessionAlive()
+    m.KeepSessionAlive("ll_tag_screen")
     
     screenFlows = m.getSessionValue(m.keys.screen_flows)
     
@@ -275,6 +275,7 @@ End Function
 
 Function ll_process_player_metrics(event as Object)
     m.debugLog("ll_process_player_metrics()")
+    
     if type(event) = "roVideoScreenEvent" or type(event) = "roVideoPlayerEvent" then
         sectionName = m.constants.section_playback
         message = "Type: unexpected"
@@ -326,21 +327,31 @@ Function ll_process_player_metrics(event as Object)
             message = "Type: isPartialResult"
             
             ll_write_registry(m.keys.auto_playback_end_reason, m.constants.finish_reason_user_exited, true, sectionName)
+        else if event.isPaused()
+            message = "Type: isPaused"
+            m.KeepSessionAlive("ll_process_player_metrics")
+            m.setSessionValue(m.keys.auto_playback_paused_session, true, false, false)
+        else if event.isResumed()
+            message = "Type: isResumed"
+            m.setSessionValue(m.keys.auto_playback_paused_session, false, false, false)
         else if event.isScreenClosed()
             message = "Type: isScreenClosed"
+            
+            pausedSession = m.getSessionValue(m.keys.auto_playback_paused_session)
+            if not (ll_is_boolean(pausedSession) and pausedSession = true) then
+                m.KeepSessionAlive("ll_process_player_metrics")
+            end if
             
             ' Clear temporary values
             m.setSessionValue(m.keys.auto_playback_buffer, "", false, false)
             m.setSessionValue(m.keys.auto_playback_buffer_start, "", false, false)
             m.setSessionValue(m.keys.auto_playback_watched, "", false, false)
+            m.setSessionValue(m.keys.auto_playback_paused_session, "", false, false)
             'Attempt to fire player metrics
             m.sendPlayerMetrics()
+
 '        else if event.isStreamSegmentInfo()
 '            m.debugLog("ll_process_player_metrics(Type: isStreamSegmentInfo, Index: " + event.GetIndex().ToStr() + ", SegUrl: " + event.GetInfo()["SegUrl"] + ")")
-'        else if event.isPaused()
-'            m.debugLog("ll_process_player_metrics(Type: isPaused" + ")")
-'        else if event.isResumed()
-'            m.debugLog("ll_process_player_metrics(Type: isResumed" + ")")
 '        else if event.isStatusMessage()
 '            m.debugLog("ll_process_player_metrics(Type: isStatusMessage, Message: " + event.GetMessage() + ")")
 '        else
@@ -352,7 +363,6 @@ End Function
 
 Function ll_send_player_metrics()
     m.debugLog("ll_send_player_metrics()")
-    m.checkSessionTimeout()
     
     sectionName = m.constants.section_playback
 
@@ -413,8 +423,8 @@ Function ll_send_player_metrics()
 End Function
 
 
-Function ll_keep_session_alive()
-    m.debugLog("ll_keep_session_alive()")
+Function ll_keep_session_alive(source="external" As String)
+    m.debugLog("ll_keep_session_alive(Source: " + source + ")")
     
     timestamp = ll_get_timestamp_generator()
     m.setSessionValue(m.keys.session_action_time, timestamp.asSeconds())
@@ -597,6 +607,7 @@ Function ll_get_storage_keys() As Object
     keys.auto_playback_current_time = "apct"
     keys.auto_playback_buffer = "apb"
     keys.auto_playback_buffer_start = "apbs"
+    keys.auto_playback_paused_session = "apps" 
     return keys
 End Function
 
