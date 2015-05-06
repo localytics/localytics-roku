@@ -54,16 +54,26 @@ End Sub
 ' initialize Localytics
 Function initLocalytics() As Void
     ' Create new Localytics instance on globalAA
-    'm.LL = LL_Create("xxxxxxxxx-xxxxxxxxxxxxx-xxxxxxxx-xxxxxxxxxxxxxx") ' Use Your AppKey here
-    'm.LL = LL_Create("c12c1152701a0620fb1efbf-7c042c6c-d7e3-11e4-ac95-005cf8cbabd8") ' Roku QA 1
-    m.LL = LL_Create("5fc02c21045a8b8a0fa396d-53c62af6-c9af-11e4-aecd-009c5fda0a25",1800, false, true) ' Roku 1
-    
+    m.LL = LL_Create("xxxxxxxxx-xxxxxxxxxxxxx-xxxxxxxx-xxxxxxxxxxxxxx") ' Use Your AppKey here
+
+
     m.LL.SetCustomDimension(0, "testCD0")
     m.LL.SetCustomDimension(3, "testCD3")
     m.LL.SetCustomDimension(5, "testCD5")
     m.LL.SetCustomDimension(9, "testCD9")
     
     m.LL.Init()
+
+    'Set Customer Identifiers
+    m.LL.SetCustomerId("Localytics")
+    
+    'Set email
+    m.LL.SetCustomerEmail("isac@domain.com")
+    m.LL.SetCustomerFirstName("First")
+    m.LL.SetCustomerLastName("Last")
+    
+    'Clear full name
+    m.LL.SetCustomerFullName("")
     
     ' Tag Event
     m.LL.TagEvent("sample-TagEvent-init")

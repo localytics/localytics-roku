@@ -17,6 +17,13 @@ Function LL_Create(appKey As String, sessionTimeout=1800 As Integer, fresh=false
     localytics.SetContentMetadata = ll_set_content_metadata
     localytics.SetContentLength = ll_set_content_length
     localytics.ProcessPlayerMetrics = ll_process_player_metrics
+    
+    localytics.SetCustomerId = ll_set_customer_id
+    localytics.SetCustomerEmail = ll_set_customer_email
+    localytics.SetCustomerFullName = ll_set_customer_full_name
+    localytics.SetCustomerFirstName = ll_set_customer_first_name
+    localytics.SetCustomerLastName = ll_set_customer_last_name
+
     ' Shouldn't be call externally
     localytics.openSession = ll_open_session
     localytics.closeSession = ll_close_session
@@ -37,6 +44,9 @@ Function LL_Create(appKey As String, sessionTimeout=1800 As Integer, fresh=false
     
     localytics.screenViewed = ll_screen_viewed
     localytics.sendPlayerMetrics = ll_send_player_metrics
+    
+    localytics.setProfileAttribute = ll_set_profile_attribute
+    localytics.patchProfile = ll_patch_profile
     
     ' Fields Creation
     localytics.endpoint = "http://webanalytics.localytics.com/api/v2/applications/"
@@ -104,9 +114,14 @@ Function ll_open_session()
     event.mm = "" '?? null is ok
     event.ms = "" '?? null is ok
     
-    'TODO Identity Stuff
-    event.cid = m.getSessionValue(m.keys.install_uuid)
-    event.utp = "anonymous"
+    customerId = m.getSessionValue(m.keys.profile_customer_id)
+    if ll_is_valid_string(customerId) then
+        event.cid = customerId
+        event.utp = "known"
+    else
+        event.cid = m.getSessionValue(m.keys.install_uuid)
+        event.utp = "anonymous"
+    end if
     
     m.send(event)
 End Function
@@ -134,9 +149,14 @@ Function ll_close_session()
     event.cta = lastActionTime - sessionTime 
     event.fl = "[" + m.getSessionValue(m.keys.screen_flows) +"]" 'Screen flows
     
-    'TODO Identity Stuff
-    event.cid = m.getSessionValue(m.keys.install_uuid)
-    event.utp = "anonymous"
+    customerId = m.getSessionValue(m.keys.profile_customer_id)
+    if ll_is_valid_string(customerId) then
+        event.cid = customerId
+        event.utp = "known"
+    else
+        event.cid = m.getSessionValue(m.keys.install_uuid)
+        event.utp = "anonymous"
+    end if
 
     m.send(event)
     
@@ -174,9 +194,14 @@ Function ll_tag_event(name as String, attributes=invalid as Object, customerValu
     event.v = customerValueIncrease '??
     event.n = name 'Event name
     
-    'TODO Identity Stuff
-    event.cid = m.getSessionValue(m.keys.install_uuid)
-    event.utp = "anonymous"
+    customerId = m.getSessionValue(m.keys.profile_customer_id)
+    if ll_is_valid_string(customerId) then
+        event.cid = customerId
+        event.utp = "known"
+    else
+        event.cid = m.getSessionValue(m.keys.install_uuid)
+        event.utp = "anonymous"
+    end if
     
     event.attrs = attributes
     
@@ -482,6 +507,7 @@ Function ll_restore_session() As Boolean
     oldSession[m.keys.session_open_time] = ll_read_registry(m.keys.session_open_time).ToInt() 
     oldSession[m.keys.session_action_time] = ll_read_registry(m.keys.session_action_time).ToInt()  
     oldSession[m.keys.screen_flows] = ll_read_registry(m.keys.screen_flows)
+    oldSession[m.keys.profile_customer_id] = ll_read_registry(m.keys.profile_customer_id)
 
     ' auto-tag metrics
     oldSession[m.keys.auto_previous_screen] = ll_read_registry(m.keys.auto_previous_screen)
@@ -575,6 +601,78 @@ End Function
 
 
 '************************************************************
+' Customer Profile Functions
+'************************************************************
+Function ll_set_customer_id(customerId="" As String)
+    m.debugLog("ll_set_customer_id()")
+
+    m.setSessionValue(m.keys.profile_customer_id, customerId)
+End Function
+
+Function ll_set_customer_email(customerEmail As String)
+    m.debugLog("ll_set_customer_email()")
+
+    m.setProfileAttribute(m.keys.profile_customer_email, customerEmail)
+End Function
+
+Function ll_set_customer_full_name(fullName As String)
+    m.debugLog("ll_set_customer_full_name()")
+
+    m.setProfileAttribute(m.keys.profile_customer_full_name, fullName)
+End Function
+
+Function ll_set_customer_first_name(firstName As String)
+    m.debugLog("ll_set_customer_first_name()")
+
+    m.setProfileAttribute(m.keys.profile_customer_first_name, firstName)
+End Function
+
+Function ll_set_customer_last_name(lastName As String)
+    m.debugLog("ll_set_customer_last_name()")
+
+    m.setProfileAttribute(m.keys.profile_customer_last_name, lastName)
+End Function
+
+Function ll_set_profile_attribute(key="" As String, value=invalid As Dynamic)
+    if key.Len() > 0 then
+        attribute = CreateObject("roAssociativeArray")
+        attribute[key] = value
+        m.patchProfile(attribute)
+    end if
+End Function
+
+Function ll_patch_profile(attributes=invalid As Object)
+    customerId = m.getSessionValue(m.keys.profile_customer_id)
+
+    if attributes = invalid or attributes.IsEmpty() or (not ll_is_valid_string(customerId)) then return -1
+    
+    endpoint = "https://api.localytics.com/profile/v1/apps/" + m.appKey + "/profiles/" + customerId
+    
+    http = CreateObject("roUrlTransfer")
+    http.SetPort(CreateObject("roMessagePort"))
+    http.SetUrl(endpoint)
+    http.AddHeader("Content-Type", "application/json")
+    http.SetCertificatesFile("common:/certs/ca-bundle.crt")
+    
+    ' TODO: Use app key for authentication
+    http.AddHeader("Authorization","Basic NTMzNzUxYzExZjFkY2EwOTA3MDc1ZTUtYTU0NmM1YTItYzhmMy0xMWU0LTU2MDYtMDBhNDI2YjE3ZGQ4OjZmNDIzYjkxYWFkOThmNzQwYmIzMTk4LWE1NDZjODhjLWM4ZjMtMTFlNC01NjA2LTAwYTQyNmIxN2RkOA==")
+    'http.AddHeader("x-app-key","5fc02c21045a8b8a0fa396d-53c62af6-c9af-11e4-aecd-009c5fda0a25")
+ 
+    http.EnableEncodings(true)
+    http.SetRequest("PATCH")
+    
+    ' Must nest it in attributes json
+    body = "{"+Chr(34)+"attributes"+Chr(34)+":" +  ll_set_params_as_string(attributes) + "}"
+    
+    m.debugLog("ll_patch_profile(url:" +endpoint+ ", body: " +body+ ")")
+
+    if (http.AsyncPostFromString(body))
+        m.outstandingRequests[endpoint+body] = http
+    endif
+End Function
+
+
+'************************************************************
 'Helper Functions
 '************************************************************
 Function ll_get_storage_keys() As Object
@@ -607,7 +705,13 @@ Function ll_get_storage_keys() As Object
     keys.auto_playback_current_time = "apct"
     keys.auto_playback_buffer = "apb"
     keys.auto_playback_buffer_start = "apbs"
-    keys.auto_playback_paused_session = "apps" 
+    keys.auto_playback_paused_session = "apps"
+    
+    keys.profile_customer_id = "pcid"
+    keys.profile_customer_email = "email"
+    keys.profile_customer_full_name = "full_name"
+    keys.profile_customer_first_name = "first_name"
+    keys.profile_customer_last_name = "last_name"
     return keys
 End Function
 
