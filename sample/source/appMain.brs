@@ -64,14 +64,14 @@ Function initLocalytics() As Void
     m.LL.Init()
 
     'Set Customer Identifiers
-    m.LL.SetCustomerId("Localytics")
+    m.LL.SetCustomerId("localytics_profile")
     
-    'Set email
-    m.LL.SetCustomerEmail("localytics@localytics.com")
-    m.LL.SetCustomerFirstName("Loca")
-    m.LL.SetCustomerLastName("Lytics")
+    'Set profile attributes
+    m.LL.SetCustomerEmail("customer@email.com")
+    m.LL.SetCustomerFirstName("First")
+    m.LL.SetCustomerLastName("Last")
     
-    'Clear full name
+    'Clear profile attributes
     m.LL.SetCustomerFullName("")
     
     ' Tag Event
