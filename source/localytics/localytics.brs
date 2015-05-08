@@ -654,10 +654,7 @@ Function ll_patch_profile(attributes=invalid As Object)
     http.AddHeader("Content-Type", "application/json")
     http.SetCertificatesFile("common:/certs/ca-bundle.crt")
     
-    ' TODO: Use app key for authentication
-    http.AddHeader("Authorization","Basic NTMzNzUxYzExZjFkY2EwOTA3MDc1ZTUtYTU0NmM1YTItYzhmMy0xMWU0LTU2MDYtMDBhNDI2YjE3ZGQ4OjZmNDIzYjkxYWFkOThmNzQwYmIzMTk4LWE1NDZjODhjLWM4ZjMtMTFlNC01NjA2LTAwYTQyNmIxN2RkOA==")
-    'http.AddHeader("x-app-key","5fc02c21045a8b8a0fa396d-53c62af6-c9af-11e4-aecd-009c5fda0a25")
- 
+    http.AddHeader("x-app-key", m.appKey)
     http.EnableEncodings(true)
     http.SetRequest("PATCH")
     

@@ -32,7 +32,7 @@ Function showVideoScreen(episode As Object)
     
     screen.SetContent(episode)
     
-    ' Set Content Metadata here
+    ' Set Arbitrary Content Metadata here
     m.LL.SetContentMetadata("Video Title", episode.Title)
     m.LL.SetContentMetadata("Video ID", episode.ContentId)
     m.LL.SetContentMetadata("Video Category", episode.Categories[0])

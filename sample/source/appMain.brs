@@ -56,7 +56,6 @@ Function initLocalytics() As Void
     ' Create new Localytics instance on globalAA
     m.LL = LL_Create("xxxxxxxxx-xxxxxxxxxxxxx-xxxxxxxx-xxxxxxxxxxxxxx") ' Use Your AppKey here
 
-
     m.LL.SetCustomDimension(0, "testCD0")
     m.LL.SetCustomDimension(3, "testCD3")
     m.LL.SetCustomDimension(5, "testCD5")
@@ -68,9 +67,9 @@ Function initLocalytics() As Void
     m.LL.SetCustomerId("Localytics")
     
     'Set email
-    m.LL.SetCustomerEmail("isac@domain.com")
-    m.LL.SetCustomerFirstName("First")
-    m.LL.SetCustomerLastName("Last")
+    m.LL.SetCustomerEmail("localytics@localytics.com")
+    m.LL.SetCustomerFirstName("Loca")
+    m.LL.SetCustomerLastName("Lytics")
     
     'Clear full name
     m.LL.SetCustomerFullName("")
