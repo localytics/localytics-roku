@@ -147,8 +147,14 @@ Function ll_close_session()
     event.ct = lastActionTime ' TODO Double check these fields
     event.ctl = lastActionTime - sessionTime
     event.cta = lastActionTime - sessionTime 
-    event.fl = "[" + m.getSessionValue(m.keys.screen_flows) +"]" 'Screen flows
     
+    screenFlows = m.getSessionValue(m.keys.screen_flows)
+    if ll_is_string(screenFlows) then
+        event.fl = "[" + screenFlows +"]" 'Screen flows
+    else
+        event.fl = "[]"
+    end if
+        
     customerId = m.getSessionValue(m.keys.profile_customer_id)
     if ll_is_valid_string(customerId) then
         event.cid = customerId
@@ -305,6 +311,11 @@ Function ll_process_player_metrics(event as Object)
         sectionName = m.constants.section_playback
         message = "Type: unexpected"
         
+        pausedSession = m.getSessionValue(m.keys.auto_playback_paused_session)
+        if not (event.isResumed() or (ll_is_boolean(pausedSession) and pausedSession = true)) then
+            m.KeepSessionAlive("ll_process_player_metrics")
+        end if
+        
         if event.isRequestFailed()
             message = "Type: isRequestFailed, Index: " + event.GetIndex().ToStr() + ", Message: " + event.GetMessage()
             
@@ -354,19 +365,13 @@ Function ll_process_player_metrics(event as Object)
             ll_write_registry(m.keys.auto_playback_end_reason, m.constants.finish_reason_user_exited, true, sectionName)
         else if event.isPaused()
             message = "Type: isPaused"
-            m.KeepSessionAlive("ll_process_player_metrics")
             m.setSessionValue(m.keys.auto_playback_paused_session, true, false, false)
         else if event.isResumed()
             message = "Type: isResumed"
             m.setSessionValue(m.keys.auto_playback_paused_session, false, false, false)
         else if event.isScreenClosed()
             message = "Type: isScreenClosed"
-            
-            pausedSession = m.getSessionValue(m.keys.auto_playback_paused_session)
-            if not (ll_is_boolean(pausedSession) and pausedSession = true) then
-                m.KeepSessionAlive("ll_process_player_metrics")
-            end if
-            
+                      
             ' Clear temporary values
             m.setSessionValue(m.keys.auto_playback_buffer, "", false, false)
             m.setSessionValue(m.keys.auto_playback_buffer_start, "", false, false)
@@ -388,7 +393,7 @@ End Function
 
 Function ll_send_player_metrics()
     m.debugLog("ll_send_player_metrics()")
-    
+
     sectionName = m.constants.section_playback
 
     if ll_read_registry(m.keys.auto_playback_pending, "false", sectionName) = "true" then

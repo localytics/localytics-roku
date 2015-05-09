@@ -55,7 +55,7 @@ End Sub
 Function initLocalytics() As Void
     ' Create new Localytics instance on globalAA
     m.LL = LL_Create("xxxxxxxxx-xxxxxxxxxxxxx-xxxxxxxx-xxxxxxxxxxxxxx") ' Use Your AppKey here
-
+    
     m.LL.SetCustomDimension(0, "testCD0")
     m.LL.SetCustomDimension(3, "testCD3")
     m.LL.SetCustomDimension(5, "testCD5")
