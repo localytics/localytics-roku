@@ -54,28 +54,28 @@ End Sub
 ' initialize Localytics
 Function initLocalytics() As Void
     ' Create new Localytics instance on globalAA
-    m.LL = Localytics(xxxxxxxxx-xxxxxxxxxxxxx-xxxxxxxx-xxxxxxxxxxxxxx) ' Use Your AppKey here
+    m.Localytics = Localytics("5fc02c21045a8b8a0fa396d-53c62af6-c9af-11e4-aecd-009c5fda0a25", 1800, false, true) ' Use Your AppKey here
     
-    m.LL.SetCustomDimension(0, "testCD0")
-    m.LL.SetCustomDimension(3, "testCD3")
-    m.LL.SetCustomDimension(5, "testCD5")
-    m.LL.SetCustomDimension(9, "testCD9")
+    m.Localytics.SetCustomDimension(0, "testCD0")
+    m.Localytics.SetCustomDimension(3, "testCD3")
+    m.Localytics.SetCustomDimension(5, "testCD5")
+    m.Localytics.SetCustomDimension(9, "testCD9")
     
-    m.LL.AutoIntegrate()
+    m.Localytics.AutoIntegrate()
 
     'Set Customer Identifiers
-    m.LL.SetCustomerId("localytics_profile")
+    m.Localytics.SetCustomerId("test_customer_1")
     
     'Set profile attributes
-    m.LL.SetCustomerEmail("customer@email.com")
-    m.LL.SetCustomerFirstName("First")
-    m.LL.SetCustomerLastName("Last")
+    m.Localytics.SetCustomerEmail("customer@email.com")
+    m.Localytics.SetCustomerFirstName("First")
+    m.Localytics.SetCustomerLastName("Last")
     
     'Clear profile attributes
-    m.LL.SetCustomerFullName("")
+    m.Localytics.SetCustomerFullName("")
     
     ' Tag Event
-    m.LL.TagEvent("sample-TagEvent-init")
+    m.Localytics.TagEvent("sample-TagEvent-init")
 End Function
 
 

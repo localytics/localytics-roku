@@ -32,12 +32,16 @@ Function showVideoScreen(episode As Object)
     
     screen.SetContent(episode)
     
-    ' Set Content Details here 
-    m.LL.SetContentDetails(episode.Length, "", episode.Title, episode.TitleSeason, episode.Categories)
+    ' Set Content Details here
+    m.Localytics.SetContentLength(episode.Length)
+    m.Localytics.SetContentId("")
+    m.Localytics.SetContentTitle(episode.Title)
+    m.Localytics.SetContentSeriesTitle(episode.TitleSeason)
+    m.Localytics.SetContentCategory(episode.Categories)
     
     screen.Show()
     
-    m.LL.TagScreen("video")
+    m.Localytics.TagScreen("video")
 
     'Uncomment his line to dump the contents of the episode to be played
     'PrintAA(episode)
@@ -47,7 +51,7 @@ Function showVideoScreen(episode As Object)
 
         if type(msg) = "roVideoScreenEvent" then
             'Hook in Localytics to receive player events here
-            m.LL.ProcessPlayerMetrics(msg)
+            m.Localytics.ProcessPlayerMetrics(msg)
             'print "showHomeScreen | msg = "; msg.getMessage() " | index = "; msg.GetIndex()
             
             if msg.isRequestFailed()

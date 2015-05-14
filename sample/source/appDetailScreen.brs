@@ -30,7 +30,7 @@ Function showDetailScreen(screen As Object, showList As Object, showIndex as Int
 
     refreshShowDetail(screen, showList, showIndex)
     
-    m.LL.TagScreen("detail")
+    m.Localytics.TagScreen("detail")
 
     'remote key id's for left/right navigation
     remoteKeyLeft  = 4
@@ -42,7 +42,7 @@ Function showDetailScreen(screen As Object, showList As Object, showIndex as Int
         if type(msg) = "roSpringboardScreenEvent" then
             
             if msg.isRemoteKeyPressed() then
-                m.LL.TagEvent("RemoteKeyPressed", {location: "detail", keyIndex: msg.GetIndex()})
+                m.Localytics.TagEvent("RemoteKeyPressed", {location: "detail", keyIndex: msg.GetIndex()})
             end if
             
             if msg.isScreenClosed()
@@ -70,12 +70,12 @@ Function showDetailScreen(screen As Object, showList As Object, showIndex as Int
                         showList[showIndex].PlayStart = PlayStart.ToInt()
                     endif
                     showVideoScreen(showList[showIndex])
-                    m.LL.TagScreen("detail")
+                    m.Localytics.TagScreen("detail")
                 endif
                 if msg.GetIndex() = 2
                     showList[showIndex].PlayStart = 0
                     showVideoScreen(showList[showIndex])
-                    m.LL.TagScreen("detail")
+                    m.Localytics.TagScreen("detail")
                 endif
                 if msg.GetIndex() = 3
                 endif

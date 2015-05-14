@@ -41,7 +41,7 @@ Function showHomeScreen(screen) As Integer
     screen.SetFocusedListItem(3)
     screen.Show()
     
-    m.LL.TagScreen("home")
+    m.Localytics.TagScreen("home")
 
     while true
         msg = wait(0, screen.GetMessagePort())
@@ -49,7 +49,7 @@ Function showHomeScreen(screen) As Integer
             print "showHomeScreen | msg = "; msg.GetMessage() " | index = "; msg.GetIndex()
             
             if msg.isRemoteKeyPressed() then
-                m.LL.TagEvent("RemoteKeyPressed", {location: "home", keyIndex: msg.GetIndex()})
+                m.Localytics.TagEvent("RemoteKeyPressed", {location: "home", keyIndex: msg.GetIndex()})
             end if
             
             if msg.isListFocused() then
@@ -59,10 +59,10 @@ Function showHomeScreen(screen) As Integer
                 kid = m.Categories.Kids[msg.GetIndex()]
                 if kid.type = "special_category" then
                     displaySpecialCategoryScreen()
-                    m.LL.TagScreen("home")
+                    m.Localytics.TagScreen("home")
                 else
                     displayCategoryPosterScreen(kid)
-                    m.LL.TagScreen("home")
+                    m.Localytics.TagScreen("home")
                 end if
             else if msg.isScreenClosed() then
                 return -1

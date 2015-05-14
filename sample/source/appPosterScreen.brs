@@ -43,7 +43,7 @@ Function showPosterScreen(screen As Object, category As Object) As Integer
     screen.SetContentList(getShowsForCategoryItem(category, m.curCategory))
     screen.Show()
     
-    m.LL.TagScreen("poster")
+    m.Localytics.TagScreen("poster")
 
     while true
         msg = wait(0, screen.GetMessagePort())
@@ -51,7 +51,7 @@ Function showPosterScreen(screen As Object, category As Object) As Integer
             print "showPosterScreen | msg = "; msg.GetMessage() " | index = "; msg.GetIndex()
             
             if msg.isRemoteKeyPressed() then
-                m.LL.TagEvent("RemoteKeyPressed", {location: "poster", keyIndex: msg.GetIndex()})
+                m.Localytics.TagEvent("RemoteKeyPressed", {location: "poster", keyIndex: msg.GetIndex()})
             end if
             
             if msg.isListFocused() then
@@ -66,7 +66,7 @@ Function showPosterScreen(screen As Object, category As Object) As Integer
                 m.curShow = displayShowDetailScreen(category, m.curShow)
                 screen.SetFocusedListItem(m.curShow)
                 print "list item updated  | new show = "; m.curShow
-                m.LL.TagScreen("poster")
+                m.Localytics.TagScreen("poster")
             else if msg.isScreenClosed() then
                 return -1
             end if
