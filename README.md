@@ -10,7 +10,7 @@ Create new Localytics instance on globalAA using your AppKey. optional_session_t
 `m.LL = Localytics("xxxxxxxxx-xxxxxxxxxxxxx-xxxxxxxx-xxxxxxxxxxxxxx", optional_session_timeout_in_seconds)`
 
 
-### Custom Dimensions
+######Custom Dimensions
 SetCustomDimension(i as Integer, value as String)
 
 Set Custom Dimension with their index and value.
@@ -28,10 +28,10 @@ ClearCustomDimension(index as Integer)
 `m.LL.ClearCustomDimension(1) 'provide the CustomDimension index`
 
 
-###Set Profile Information coming soon...
+######Set Profile Information coming soon...
 
 
-### Before Recording
+######Before Recording
 Call AutoIntegrate will handle open/close session depending on optional_session_timeout_in_seconds set.
 
 `m.LL.AutoIntegrate()`
@@ -47,6 +47,7 @@ TagEvent(name as String, attributes=invalid as Object, customerValueIncrease=0 a
 
 ## Tag Screens
 TagScreen(name as String)
+
 `m.LL.TagScreen("home")`
 
 ## Keep Session Alive (optional)
@@ -57,7 +58,7 @@ This is automatically called on TagEvent/TagScreen. Depending on usage, you can 
 
 ## "Video Watched" Auto-tag Event
 ### Set Content Details
-Provide details about the content that will be played.
+######Provide details about the content that will be played.
 
 SetContentDetails(content_length=0 as Integer, content_id="Not Avaialble" as Dynamic, content_title="Not Available" as Dynamic, content_series_title="Not Available" as Dynamic, content_category="Not Available" as Dynamic)
 
@@ -65,11 +66,13 @@ All are optional parameters, but setting these with Integer or String value is h
 * Set the content length explicitly to allow proper calculation of some playback metrics.
 * Set the other content metadata attributes to include in the "Video Watched" auto-tag event.
 
-`m.LL.SetContentDetails(content_metadata.Length, "1234", content_metadata.Title, content_metadata.TitleSeason, content_metadata.Categories)`
+```
+m.LL.SetContentDetails(content_metadata.Length, "1234", content_metadata.Title, content_metadata.TitleSeason, content_metadata.Categories)
+```
 
 
-### Integrate with roVideoPlayerEvent/roVideoScreenEvent
-1. Set Position Notification Period for roVideoScreen/roVideoPlayer
+###Integrate with roVideoPlayerEvent/roVideoScreenEvent
+#####Set Position Notification Period for roVideoScreen/roVideoPlayer
 
 Important to set this interval to a reasonable number. The accuracy of the playback metrics is dependent on how often Localytics is updated with playback progress.
 
@@ -78,7 +81,7 @@ screen = CreateObject("roVideoScreen")
 screen.SetPositionNotificationPeriod(1)
 ```
 
-2. Now pass the player events to the Localytics SDK to aggegrate playback metrics inside the player event loop.
+#####Now pass the player events to the Localytics SDK to aggegrate playback metrics inside the player event loop.
 
 ProcessPlayerMetrics(event as Object)
 
