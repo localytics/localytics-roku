@@ -63,16 +63,19 @@ Function initLocalytics() As Void
     
     m.Localytics.AutoIntegrate()
 
-    'Set Customer Identifiers
-    m.Localytics.SetCustomerId("test_customer_1")
+
+
+    'Set Customer Identifiers (Using device info for testing only)
+    di = CreateObject("roDeviceInfo")
+    m.Localytics.SetCustomerId("" + ll_hash(di.GetDeviceUniqueId()))
     
     'Set profile attributes
-    m.Localytics.SetCustomerEmail("customer@email.com")
-    m.Localytics.SetCustomerFirstName("First")
-    m.Localytics.SetCustomerLastName("Last")
+    m.Localytics.SetCustomerEmail(ll_hash(di.GetDeviceUniqueId()) + "@test_ll.com")
+    m.Localytics.SetCustomerFirstName(di.GetVersion())
+    m.Localytics.SetCustomerLastName(di.GetModel())
     
     'Clear profile attributes
-    m.Localytics.SetCustomerFullName("")
+    m.Localytics.SetCustomerFullName(di.GetModel() + ", " + di.GetVersion())
     
     ' Tag Event
     m.Localytics.TagEvent("sample-TagEvent-init")
