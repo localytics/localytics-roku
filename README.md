@@ -10,7 +10,16 @@ Create new Localytics instance on globalAA using your AppKey. optional_session_t
 `m.LL = Localytics("xxxxxxxxx-xxxxxxxxxxxxx-xxxxxxxx-xxxxxxxxxxxxxx", optional_session_timeout_in_seconds)`
 
 
-######Custom Dimensions
+######Before Recording
+Call AutoIntegrate will handle open/close session depending on optional_session_timeout_in_seconds set.
+
+`m.LL.AutoIntegrate()`
+
+
+######Set Profile Information coming soon...
+
+
+##Custom Dimensions
 SetCustomDimension(i as Integer, value as String)
 
 Set Custom Dimension with their index and value.
@@ -27,14 +36,6 @@ ClearCustomDimension(index as Integer)
 
 `m.LL.ClearCustomDimension(1) 'provide the CustomDimension index`
 
-
-######Set Profile Information coming soon...
-
-
-######Before Recording
-Call AutoIntegrate will handle open/close session depending on optional_session_timeout_in_seconds set.
-
-`m.LL.AutoIntegrate()`
 
 
 ## Tag Events
@@ -60,7 +61,7 @@ This function is usually not necessary b/c TagEvent/TagScreen/ProcessPlayerMetri
 ### Set Content Details
 ######Provide details about the content that will be played.
 
-SetContentDetails(content_length=0 as Integer, content_id="Not Avaialble" as Dynamic, content_title="Not Available" as Dynamic, content_series_title="Not Available" as Dynamic, content_category="Not Available" as Dynamic)
+SetContentDetails(content_length=0 as Integer, content_id="N/A" as Dynamic, content_title="N/A" as Dynamic, content_series_title="N/A" as Dynamic, content_category="N/A" as Dynamic)
 
 All are optional parameters, but setting these with Integer or String value is highly recommended:
 * Set the content length explicitly to allow proper calculation of some playback metrics.
