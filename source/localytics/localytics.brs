@@ -14,7 +14,12 @@ Function Localytics(appKey As String, sessionTimeout=1800 As Integer, fresh=fals
     new_localytics.TagScreen = ll_tag_screen
     new_localytics.KeepSessionAlive = ll_keep_session_alive
     
-    new_localytics.SetContentDetails = ll_set_content_details
+    new_localytics.SetContentLength = ll_set_content_length
+    new_localytics.SetContentId = ll_set_content_id
+    new_localytics.SetContentTitle = ll_set_content_title
+    new_localytics.SetContentSeriesTitle = ll_set_content_series_title
+    new_localytics.SetContentCategory = ll_set_content_category
+
     new_localytics.ProcessPlayerMetrics = ll_process_player_metrics
     
     new_localytics.SetCustomerId = ll_set_customer_id
@@ -42,7 +47,6 @@ Function Localytics(appKey As String, sessionTimeout=1800 As Integer, fresh=fals
     new_localytics.isPersistedAcrossSession = ll_is_persisted_across_session
     
     new_localytics.screenViewed = ll_screen_viewed
-    new_localytics.setContentLength = ll_set_content_length
     new_localytics.setContentMetadata = ll_set_content_metadata
     new_localytics.sendPlayerMetrics = ll_send_player_metrics
     
@@ -281,17 +285,6 @@ Function ll_clear_custom_dimension(i as Integer)
     m.SetCustomDimension(i, "")
 End Function
 
-' Sets Content Details with preset Key's and content length
-Function ll_set_content_details(content_length=0 as Integer, content_id="N/A" as Dynamic, content_title="N/A" as Dynamic, content_series_title="N/A" as Dynamic, content_category="N/A" as Dynamic)
-    m.debugLog("ll_set_content_details()")
-
-    m.setContentLength(content_length, true)
-    
-    m.setContentMetadata(m.constants.content_id, content_id, true, false)
-    m.setContentMetadata(m.constants.content_title, content_title, true, false)
-    m.setContentMetadata(m.constants.content_series_title, content_series_title, true, false)
-    m.setContentMetadata(m.constants.content_category, content_category, true, true)
-End Function
 
 ' Sets Content Metadata for auto-tagging. If "value" is empty, the key is deleted.
 Function ll_set_content_metadata(key as String, value as Dynamic, required=false as Boolean, flush=true as Boolean)
@@ -302,7 +295,7 @@ Function ll_set_content_metadata(key as String, value as Dynamic, required=false
         if ll_is_valid_string(strValue) then
             ll_write_registry(key, strValue, flush, m.constants.section_metadata)
         else if required then
-            ll_write_registry(key, "Not Available", flush, m.constants.section_metadata) ' Remove the attribute if value is invalid or empty
+            ll_write_registry(key, m.constants.not_available, flush, m.constants.section_metadata) ' Remove the attribute if value is invalid or empty
         else
             ll_delete_registry(key, m.constants.section_metadata, flush)
         end if
@@ -317,6 +310,22 @@ Function ll_set_content_length(value as Integer, flush=true as Boolean)
     else
         ll_delete_registry(m.keys.auto_playback_length, m.constants.section_playback, flush)
     end if
+End Function
+
+Function ll_set_content_id(value="N/A" as Dynamic)
+    m.setContentMetadata(m.constants.content_id, value, true, true)
+End Function
+
+Function ll_set_content_title(value="N/A" as Dynamic)
+    m.setContentMetadata(m.constants.content_title, value, true, true)
+End Function
+
+Function ll_set_content_series_title(value="N/A" as Dynamic)
+    m.setContentMetadata(m.constants.content_series_title, value, true, true)
+End Function
+
+Function ll_set_content_category(value="N/A" as Dynamic)
+    m.setContentMetadata(m.constants.content_category, value, true, true)
 End Function
 
 Function ll_process_player_metrics(event as Object)
