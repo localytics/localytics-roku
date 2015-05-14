@@ -61,7 +61,7 @@ This function is usually not necessary b/c TagEvent/TagScreen/ProcessPlayerMetri
 ### Set Content Details
 ######Provide details about the content that will be played.
 
-SetContentDetails(content_length=0 as Integer, content_id="Not Avaialble" as Dynamic, content_title="Not Available" as Dynamic, content_series_title="Not Available" as Dynamic, content_category="Not Available" as Dynamic)
+SetContentDetails(content_length=0 as Integer, content_id="N/A" as Dynamic, content_title="N/A" as Dynamic, content_series_title="N/A" as Dynamic, content_category="N/A" as Dynamic)
 
 All are optional parameters, but setting these with Integer or String value is highly recommended:
 * Set the content length explicitly to allow proper calculation of some playback metrics.
