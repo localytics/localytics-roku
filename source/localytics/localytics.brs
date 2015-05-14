@@ -2,67 +2,68 @@
 ' Note: 
 ' - "fresh" will clear previous stored values
 ' - "debug" will log some messages
-Function LL_Create(appKey As String, sessionTimeout=1800 As Integer, fresh=false As Boolean, debug=false As Boolean) As Object
+Function Localytics(appKey As String, sessionTimeout=1800 As Integer, fresh=false As Boolean, debug=false As Boolean) As Object
 
-    localytics = CreateObject("roAssociativeArray")
+    new_localytics = CreateObject("roAssociativeArray")
     
     ' Function for External Calls
-    localytics.Init = ll_initialize
-    localytics.SetCustomDimension = ll_set_custom_dimension
-    localytics.ClearCustomDimension = ll_clear_custom_dimension
-    localytics.TagEvent = ll_tag_event
-    localytics.TagScreen = ll_tag_screen
-    localytics.KeepSessionAlive = ll_keep_session_alive
+    new_localytics.AutoIntegrate = ll_initialize
+    new_localytics.SetCustomDimension = ll_set_custom_dimension
+    new_localytics.ClearCustomDimension = ll_clear_custom_dimension
+    new_localytics.TagEvent = ll_tag_event
+    new_localytics.TagScreen = ll_tag_screen
+    new_localytics.KeepSessionAlive = ll_keep_session_alive
     
-    localytics.SetContentMetadata = ll_set_content_metadata
-    localytics.SetContentLength = ll_set_content_length
-    localytics.ProcessPlayerMetrics = ll_process_player_metrics
+    new_localytics.SetContentDetails = ll_set_content_details
+    new_localytics.ProcessPlayerMetrics = ll_process_player_metrics
     
-    localytics.SetCustomerId = ll_set_customer_id
-    localytics.SetCustomerEmail = ll_set_customer_email
-    localytics.SetCustomerFullName = ll_set_customer_full_name
-    localytics.SetCustomerFirstName = ll_set_customer_first_name
-    localytics.SetCustomerLastName = ll_set_customer_last_name
+    new_localytics.SetCustomerId = ll_set_customer_id
+    new_localytics.SetCustomerEmail = ll_set_customer_email
+    new_localytics.SetCustomerFullName = ll_set_customer_full_name
+    new_localytics.SetCustomerFirstName = ll_set_customer_first_name
+    new_localytics.SetCustomerLastName = ll_set_customer_last_name
 
     ' Shouldn't be call externally
-    localytics.openSession = ll_open_session
-    localytics.closeSession = ll_close_session
-    localytics.deleteSessionData = ll_delete_session_data
-    localytics.restoreSession = ll_restore_session
-    localytics.persistSession = ll_persist_session
-    localytics.checkSessionTimeout = ll_check_session_timeout
-    localytics.loadCustomDimensions = ll_load_custom_dimensions
-    localytics.processOutStandingRequest = ll_process_outstanding_request
-    localytics.hasSession = ll_has_session
-    localytics.send = ll_send
-    localytics.getHeader = ll_get_header
-    localytics.getSessionValue = ll_get_session_value
-    localytics.setSessionValue = ll_set_session_value
-    localytics.debugLog = ll_debug_log
-    localytics.upload = ll_upload
-    localytics.isPersistedAcrossSession = ll_is_persisted_across_session
+    new_localytics.openSession = ll_open_session
+    new_localytics.closeSession = ll_close_session
+    new_localytics.deleteSessionData = ll_delete_session_data
+    new_localytics.restoreSession = ll_restore_session
+    new_localytics.persistSession = ll_persist_session
+    new_localytics.checkSessionTimeout = ll_check_session_timeout
+    new_localytics.loadCustomDimensions = ll_load_custom_dimensions
+    new_localytics.processOutStandingRequest = ll_process_outstanding_request
+    new_localytics.hasSession = ll_has_session
+    new_localytics.send = ll_send
+    new_localytics.getHeader = ll_get_header
+    new_localytics.getSessionValue = ll_get_session_value
+    new_localytics.setSessionValue = ll_set_session_value
+    new_localytics.debugLog = ll_debug_log
+    new_localytics.upload = ll_upload
+    new_localytics.isPersistedAcrossSession = ll_is_persisted_across_session
     
-    localytics.screenViewed = ll_screen_viewed
-    localytics.sendPlayerMetrics = ll_send_player_metrics
+    new_localytics.screenViewed = ll_screen_viewed
+    new_localytics.setContentLength = ll_set_content_length
+    new_localytics.setContentMetadata = ll_set_content_metadata
+    new_localytics.sendPlayerMetrics = ll_send_player_metrics
     
-    localytics.setProfileAttribute = ll_set_profile_attribute
-    localytics.patchProfile = ll_patch_profile
+    new_localytics.setProfileAttribute = ll_set_profile_attribute
+    new_localytics.patchProfile = ll_patch_profile
     
     ' Fields Creation
-    localytics.endpoint = "http://webanalytics.localytics.com/api/v2/applications/"
-    localytics.appKey = appKey
-    localytics.sessionTimeout = sessionTimeout
-    localytics.outstandingRequests = CreateObject("roAssociativeArray") ' Volatile Store for roUrlTransfer response
-    localytics.customDimensions = localytics.loadCustomDimensions() 
-    localytics.debug = debug 'Extra loggin on/off
-    localytics.keys = ll_get_storage_keys()
-    localytics.constants = ll_get_constants()
+    new_localytics.endpoint = "http://webanalytics.localytics.com/api/v2/applications/"
+    new_localytics.appKey = appKey
+    new_localytics.sessionTimeout = sessionTimeout
+    new_localytics.outstandingRequests = CreateObject("roAssociativeArray") ' Volatile Store for roUrlTransfer response
+    new_localytics.customDimensions = new_localytics.loadCustomDimensions() 
+    new_localytics.debug = debug 'Extra loggin on/off
+    new_localytics.keys = ll_get_storage_keys()
+    new_localytics.constants = ll_get_constants()
        
     if fresh then
-        localytics.deleteSessionData(true)
+        new_localytics.deleteSessionData(true)
     end if
     
-    return localytics
+    return new_localytics
 End Function
 
 'Initializes the session
