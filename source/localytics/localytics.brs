@@ -282,7 +282,7 @@ Function ll_clear_custom_dimension(i as Integer)
 End Function
 
 ' Sets Content Details with preset Key's and content length
-Function ll_set_content_details(content_length=0 as Integer, content_id="Not Avaialble" as Dynamic, content_title="Not Available" as Dynamic, content_series_title="Not Available" as Dynamic, content_category="Not Available" as Dynamic)
+Function ll_set_content_details(content_length=0 as Integer, content_id="N/A" as Dynamic, content_title="N/A" as Dynamic, content_series_title="N/A" as Dynamic, content_category="N/A" as Dynamic)
     m.debugLog("ll_set_content_details()")
 
     m.setContentLength(content_length, true)
