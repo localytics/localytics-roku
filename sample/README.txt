@@ -5,7 +5,7 @@ http://sdkdocs.roku.com/display/sdkdoc/Developer+Guide#DeveloperGuide-12Developi
 http://sourceforge.net/projects/rokusdkexamples/files/videoplayer.zip/download
 
 To run:
-1. Add the latest localytics.brs library into /source
+1. Add the latest localytics.brs library into /source (this is already done if you use the eclipse project)
 2. a) zip up /images /source and manifest file, or
 b) export from eclipse with Brightscript plugin
 3. Deploy: http://sdkdocs.roku.com/display/sdkdoc/Developer+Guide#DeveloperGuide-70LoadingandRunningyourApplicationWalkthrough
