@@ -281,6 +281,7 @@ Function ll_clear_custom_dimension(i as Integer)
     m.SetCustomDimension(i, "")
 End Function
 
+' Sets Content Details with preset Key's and content length
 Function ll_set_content_details(content_length=0 as Integer, content_id="Not Avaialble" as Dynamic, content_title="Not Available" as Dynamic, content_series_title="Not Available" as Dynamic, content_category="Not Available" as Dynamic)
     m.debugLog("ll_set_content_details()")
 
@@ -413,12 +414,19 @@ Function ll_send_player_metrics()
     if ll_read_registry(m.keys.auto_playback_pending, "false", playback_section) = "true" then
         attributes = CreateObject("roAssociativeArray")
         
+        ' Required metadata fields
+        attributes[m.constants.content_id] = m.constants.not_available
+        attributes[m.constants.content_title] = m.constants.not_available
+        attributes[m.constants.content_series_title] = m.constants.not_available
+        attributes[m.constants.content_category] = m.constants.not_available
+        
         ' Process metadata
         metadata_section= CreateObject("roRegistrySection", m.constants.section_metadata)
         for each key in metadata_section.GetKeyList()
             attributes[key] = metadata_section.Read(key)
         end for
         
+        ' Fill Playback Data
         contentUrl = ll_read_registry(m.keys.auto_playback_url, m.constants.not_available, playback_section)
         attributes[m.constants.content_url] = contentUrl
         
