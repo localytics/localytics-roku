@@ -677,11 +677,11 @@ Function ll_patch_profile(attributes=invalid As Object)
 
     if attributes = invalid or attributes.IsEmpty() or (not ll_is_valid_string(customerId)) then return -1
     
-    endpoint = "http://profile.localytics.com/v1/apps/" + m.appKey + "/profiles/" + customerId
+    endpoint = "https://profile.localytics.com/v1/apps/" + m.appKey + "/profiles/" + customerId
     
     http = CreateObject("roUrlTransfer")
-    'http.SetCertificatesFile("common:/certs/ca-bundle.crt")
-    'http.InitClientCertificates()
+    http.SetCertificatesFile("common:/certs/ca-bundle.crt")
+    http.InitClientCertificates()
     http.SetPort(CreateObject("roMessagePort"))
     http.SetUrl(endpoint)
     
