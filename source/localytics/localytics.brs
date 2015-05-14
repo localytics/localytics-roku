@@ -281,27 +281,40 @@ Function ll_clear_custom_dimension(i as Integer)
     m.SetCustomDimension(i, "")
 End Function
 
+Function ll_set_content_details(content_length=0 as Integer, content_id="Not Avaialble" as Dynamic, content_title="Not Available" as Dynamic, content_series_title="Not Available" as Dynamic, content_category="Not Available" as Dynamic)
+    m.debugLog("ll_set_content_details()")
+
+    m.setContentLength(content_length, true)
+    
+    m.setContentMetadata(m.constants.content_id, content_id, true, false)
+    m.setContentMetadata(m.constants.content_title, content_title, true, false)
+    m.setContentMetadata(m.constants.content_series_title, content_series_title, true, false)
+    m.setContentMetadata(m.constants.content_category, content_category, true, true)
+End Function
+
 ' Sets Content Metadata for auto-tagging. If "value" is empty, the key is deleted.
-Function ll_set_content_metadata(key as String, value as Dynamic)
+Function ll_set_content_metadata(key as String, value as Dynamic, required=false as Boolean, flush=true as Boolean)
     m.debugLog("ll_set_content_metadata("+ key + ", " + ll_to_string(value) + ")")
     
     if ll_is_string(key)
         strValue = ll_to_string(value)
         if ll_is_valid_string(strValue) then
-            ll_write_registry(key, strValue, true, m.constants.section_metadata)
+            ll_write_registry(key, strValue, flush, m.constants.section_metadata)
+        else if required then
+            ll_write_registry(key, "Not Available", flush, m.constants.section_metadata) ' Remove the attribute if value is invalid or empty
         else
-            ll_delete_registry(key, m.constants.section_metadata) ' Remove the attribute if value is invalid or empty
+            ll_delete_registry(key, m.constants.section_metadata, flush)
         end if
     end if
 End Function
 
-Function ll_set_content_length(value as Integer)
+Function ll_set_content_length(value as Integer, flush=true as Boolean)
     m.debugLog("ll_set_content_length( Content Length: " + value.ToStr() + ")")
     
     if value > 0 then
-        ll_write_registry(m.keys.auto_playback_length, value.ToStr(), true, m.constants.section_playback)
+        ll_write_registry(m.keys.auto_playback_length, value.ToStr(), flush, m.constants.section_playback)
     else
-        ll_delete_registry(m.keys.auto_playback_length, m.constants.section_playback)
+        ll_delete_registry(m.keys.auto_playback_length, m.constants.section_playback, flush)
     end if
 End Function
 
@@ -395,34 +408,34 @@ End Function
 Function ll_send_player_metrics()
     m.debugLog("ll_send_player_metrics()")
 
-    sectionName = m.constants.section_playback
+    playback_section = m.constants.section_playback
 
-    if ll_read_registry(m.keys.auto_playback_pending, "false", sectionName) = "true" then
+    if ll_read_registry(m.keys.auto_playback_pending, "false", playback_section) = "true" then
         attributes = CreateObject("roAssociativeArray")
         
         ' Process metadata
-        sec = CreateObject("roRegistrySection", m.constants.section_metadata)
-        for each key in sec.GetKeyList()
-            attributes[key] = sec.Read(key)
+        metadata_section= CreateObject("roRegistrySection", m.constants.section_metadata)
+        for each key in metadata_section.GetKeyList()
+            attributes[key] = metadata_section.Read(key)
         end for
         
-        contentUrl = ll_read_registry(m.keys.auto_playback_url, m.constants.not_available, sectionName)
+        contentUrl = ll_read_registry(m.keys.auto_playback_url, m.constants.not_available, playback_section)
         attributes[m.constants.content_url] = contentUrl
         
-        endReason = ll_read_registry(m.keys.auto_playback_end_reason, m.constants.finish_reason_unknown, sectionName)
+        endReason = ll_read_registry(m.keys.auto_playback_end_reason, m.constants.finish_reason_unknown, playback_section)
         attributes[m.constants.content_did_reach_end] = ll_to_string(endReason = m.constants.finish_reason_playback_ended)
         attributes[m.constants.end_reason] = endReason
         
-        bufferTime = ll_read_registry(m.keys.auto_playback_buffer, m.constants.not_available, sectionName)
+        bufferTime = ll_read_registry(m.keys.auto_playback_buffer, m.constants.not_available, playback_section)
         attributes[m.constants.content_time_to_buffer_seconds] = bufferTime
         
-        playbackTime = ll_read_registry(m.keys.auto_playback_current_time, m.constants.not_available, sectionName)
+        playbackTime = ll_read_registry(m.keys.auto_playback_current_time, m.constants.not_available, playback_section)
         attributes[m.constants.content_timestamp] = playbackTime
         
-        contentLength = ll_read_registry(m.keys.auto_playback_length, m.constants.not_available, sectionName)
+        contentLength = ll_read_registry(m.keys.auto_playback_length, m.constants.not_available, playback_section)
         attributes[m.constants.content_length] = contentLength
         
-        timeWatched = ll_read_registry(m.keys.auto_playback_watched, m.constants.not_available, sectionName)
+        timeWatched = ll_read_registry(m.keys.auto_playback_watched, m.constants.not_available, playback_section)
         attributes[m.constants.content_played_seconds] = timeWatched
         
         percentComplete = m.constants.not_available
@@ -435,21 +448,15 @@ Function ll_send_player_metrics()
         end if
         attributes[m.constants.content_played_percent] = percentComplete
         
+        for each key in attributes ' clean up as string fields
+            attributes[key] = ll_json_escape_string(attributes[key])
+        end for 
+        
         m.TagEvent(m.constants.event_video_watched, attributes, timeWatched.ToInt())
         
         ' Cleanup
-        for each key in sec.GetKeyList()
-            sec.Delete(key)
-        end for
-        sec.Flush()
-        
-        ll_delete_registry(m.keys.auto_playback_pending, sectionName, false)
-        ll_delete_registry(m.keys.auto_playback_url, sectionName, false)
-        ll_delete_registry(m.keys.auto_playback_end_reason, sectionName, false)
-        ll_delete_registry(m.keys.auto_playback_buffer, sectionName, false)
-        ll_delete_registry(m.keys.auto_playback_current_time, sectionName, false)
-        ll_delete_registry(m.keys.auto_playback_length, sectionName, false)
-        ll_delete_registry(m.keys.auto_playback_watched, sectionName, true)
+        ll_clear_registry(true,m.constants.section_metadata)
+        ll_clear_registry(true,m.constants.section_playback)
     end if
 End Function
 
@@ -652,7 +659,7 @@ Function ll_patch_profile(attributes=invalid As Object)
 
     if attributes = invalid or attributes.IsEmpty() or (not ll_is_valid_string(customerId)) then return -1
     
-    endpoint = "https://api.localytics.com/profile/v1/apps/" + m.appKey + "/profiles/" + customerId
+    endpoint = "http://profile.localytics.com/profile/v1/apps/" + m.appKey + "/profiles/" + customerId
     
     http = CreateObject("roUrlTransfer")
     http.SetPort(CreateObject("roMessagePort"))
@@ -738,6 +745,11 @@ Function ll_get_constants() As Object
     constants.time_on_screen = "Time On Screen (Seconds)"
     constants.not_available = "N/A"
     constants.content_url = "Content URL"
+    constants.content_id = "Content ID"
+    constants.content_title = "Content Title"
+    constants.content_series_title = "Content Series Title"
+    constants.content_category = "Content Category"
+
     constants.content_length = "Content Length (Seconds)"
     constants.content_played_seconds = "Content Played (Seconds)"
     constants.content_played_percent = "Content Played (Percent)"
@@ -790,6 +802,17 @@ Function ll_delete_registry(key As String, section="com.localytics" As String, f
     if flush then
         sec.Flush()
     end if
+End Function
+
+' Writes "value" to "key" of registry "section". "flush" = false will skip calling Flush(), ideal for multiple writes
+Function ll_clear_registry(flush=true As Boolean, section="com.localytics" As String)
+    sec = CreateObject("roRegistrySection", section)
+    
+    for each key in sec.GetKeyList()
+        sec.Delete(key)
+    next
+    
+    sec.Flush()
 End Function
 
 ' True if the instance has been initialized
@@ -887,6 +910,14 @@ Function ll_to_string(variable As Dynamic) As String
         return FormatJson(variable)
     else
         return type(variable)
+    end if
+End Function
+
+Function ll_json_escape_string(variable As Dynamic) As Dynamic
+    if ll_is_string(variable) then
+        return variable.Replace(Chr(34), "\" + Chr(34))
+    else
+        return variable
     end if
 End Function
 
