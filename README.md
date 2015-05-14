@@ -10,7 +10,16 @@ Create new Localytics instance on globalAA using your AppKey. optional_session_t
 `m.LL = Localytics("xxxxxxxxx-xxxxxxxxxxxxx-xxxxxxxx-xxxxxxxxxxxxxx", optional_session_timeout_in_seconds)`
 
 
-######Custom Dimensions
+######Before Recording
+Call AutoIntegrate will handle open/close session depending on optional_session_timeout_in_seconds set.
+
+`m.LL.AutoIntegrate()`
+
+
+######Set Profile Information coming soon...
+
+
+##Custom Dimensions
 SetCustomDimension(i as Integer, value as String)
 
 Set Custom Dimension with their index and value.
@@ -27,14 +36,6 @@ ClearCustomDimension(index as Integer)
 
 `m.LL.ClearCustomDimension(1) 'provide the CustomDimension index`
 
-
-######Set Profile Information coming soon...
-
-
-######Before Recording
-Call AutoIntegrate will handle open/close session depending on optional_session_timeout_in_seconds set.
-
-`m.LL.AutoIntegrate()`
 
 
 ## Tag Events
