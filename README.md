@@ -51,7 +51,7 @@ TagScreen(name as String)
 `m.LL.TagScreen("home")`
 
 ## Keep Session Alive (optional)
-This is automatically called on TagEvent/TagScreen. Depending on usage, you can call this in event loops.
+This function is usually not necessary b/c TagEvent/TagScreen/ProcessPlayerMetrics function will automatically call KeepSessionAlive(). If there is no other interaction with this SDK, calling KeepSessionAlive() can prevent the current session from timing out.
 
 `m.LL.KeepSessionAlive()`
 
