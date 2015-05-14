@@ -673,26 +673,33 @@ End Function
 
 Function ll_patch_profile(attributes=invalid As Object)
     customerId = m.getSessionValue(m.keys.profile_customer_id)
+    installId = ll_read_registry(m.keys.install_uuid, ll_generate_guid())
 
     if attributes = invalid or attributes.IsEmpty() or (not ll_is_valid_string(customerId)) then return -1
     
-    endpoint = "http://profile.localytics.com/profile/v1/apps/" + m.appKey + "/profiles/" + customerId
+    endpoint = "http://profile.localytics.com/v1/apps/" + m.appKey + "/profiles/" + customerId
     
     http = CreateObject("roUrlTransfer")
+    'http.SetCertificatesFile("common:/certs/ca-bundle.crt")
+    'http.InitClientCertificates()
     http.SetPort(CreateObject("roMessagePort"))
     http.SetUrl(endpoint)
+    
     http.AddHeader("Content-Type", "application/json")
-    http.SetCertificatesFile("common:/certs/ca-bundle.crt")
     
-    http.AddHeader("x-app-key", m.appKey)
+    timestamp = ll_get_timestamp_generator()
+    http.AddHeader("x-install-id", installId)
+    http.AddHeader("x-upload-time", timestamp.asSeconds().toStr())
+    http.AddHeader("x-customer-id", customerId)
     http.EnableEncodings(true)
-    http.SetRequest("PATCH")
-    
+
+    bodyData = { attributes: attributes, database: "app"}
+        
     ' Must nest it in attributes json
-    body = "{"+Chr(34)+"attributes"+Chr(34)+":" +  ll_set_params_as_string(attributes) + "}"
+    body = ll_set_params_as_string(bodyData)
     
     m.debugLog("ll_patch_profile(url:" +endpoint+ ", body: " +body+ ")")
-
+    
     if (http.AsyncPostFromString(body))
         m.outstandingRequests[endpoint+body] = http
     endif
@@ -898,7 +905,7 @@ Function ll_set_params_as_string(params As Object) As String
         else if ll_is_integer(params[key]) then
             result = result + Chr(34) + key + Chr(34) + ":" + (params[key]).ToStr() + ","
         else
-            if params[key] = invalid or params[key] = "" then
+            if params[key] = invalid or (ll_is_string(params[key]) and not ll_is_valid_string(params[key])) then
                 result = result + Chr(34) + key + Chr(34) + ":null" + ","
             else
                 result = result + Chr(34) + key + Chr(34) + ":" + Chr(34) + ll_to_string(params[key]) + Chr(34) + ","
