@@ -3,72 +3,95 @@
 Localytics library is contained in source/localytics/localytics.brs
 
 ## Initialization
-Localytics(appKey As String, sessionTimeout=1800 As Integer) as Object
+*Localytics(appKey As String, sessionTimeout=1800 As Integer) as Object*
 
 Create new Localytics instance on globalAA using your AppKey. optional_session_timeout_in_seconds defaults to 1800 seconds.
 
-`m.LL = Localytics("xxxxxxxxx-xxxxxxxxxxxxx-xxxxxxxx-xxxxxxxxxxxxxx", optional_session_timeout_in_seconds)`
+`m.Localytics = Localytics("xxxxxxxxx-xxxxxxxxxxxxx-xxxxxxxx-xxxxxxxxxxxxxx", optional_session_timeout_in_seconds)`
 
 
 ######Before Recording
 Call AutoIntegrate will handle open/close session depending on optional_session_timeout_in_seconds set.
 
-`m.LL.AutoIntegrate()`
+`m.Localytics.AutoIntegrate()`
 
+##Set Profile Information
+*SetCustomerId(value As String)*<br /> 
+*SetCustomerEmail(value As String)*<br /> 
+*SetCustomerFirstName(value As String)*<br /> 
+*SetCustomerLastName(value As String)*<br /> 
+*SetCustomerFullName(value As String)* 
 
-######Set Profile Information coming soon...
+If available, CustomerId should be set. Email and name fields are also available to further identify the user Profile.
 
+```
+m.Localytics.SetCustomerId("1a2b3c4d")
+
+m.Localytics.SetCustomerEmail("test@test.com)
+m.Localytics.SetCustomerFirstName("First")
+m.Localytics.SetCustomerLastName("Last")
+m.Localytics.SetCustomerFullName("Last, First")
+```
 
 ##Custom Dimensions
-SetCustomDimension(i as Integer, value as String)
+*SetCustomDimension(i as Integer, value as String)*
 
 Set Custom Dimension with their index and value.
 
 ```
-m.LL.SetCustomDimension(0, "testCD0")
-m.LL.SetCustomDimension(3, "testCD3")
-m.LL.SetCustomDimension(5, "testCD5")
+m.Localytics.SetCustomDimension(0, "testCD0")
+m.Localytics.SetCustomDimension(3, "testCD3")
+m.Localytics.SetCustomDimension(5, "testCD5")
 ```
 
 You can also clear a particular CustomDimension.
 
-ClearCustomDimension(index as Integer)
+*ClearCustomDimension(index as Integer)*
 
-`m.LL.ClearCustomDimension(1) 'provide the CustomDimension index`
+`m.Localytics.ClearCustomDimension(1) 'provide the CustomDimension index`
 
 
 
 ## Tag Events
-TagEvent(name as String, attributes=invalid as Object, customerValueIncrease=0 as Integer)
+*TagEvent(name as String, attributes=invalid as Object, customerValueIncrease=0 as Integer)*
 
-`m.LL.TagEvent("sample-TagEvent-init")`
+`m.Localytics.TagEvent("sample-TagEvent-init")`
 
-`m.LL.TagEvent("RemoteKeyPressed", {location: "home", keyIndex: msg.GetIndex()})`
+`m.Localytics.TagEvent("RemoteKeyPressed", {location: "home", keyIndex: msg.GetIndex()})`
 
 
 ## Tag Screens
-TagScreen(name as String)
+*TagScreen(name as String)*
 
-`m.LL.TagScreen("home")`
+`m.Localytics.TagScreen("home")`
 
 ## Keep Session Alive (optional)
 This function is usually not necessary b/c TagEvent/TagScreen/ProcessPlayerMetrics function will automatically call KeepSessionAlive(). If there is no other interaction with this SDK, calling KeepSessionAlive() can prevent the current session from timing out.
 
-`m.LL.KeepSessionAlive()`
+`m.Localytics.KeepSessionAlive()`
 
 
 ## "Video Watched" Auto-tag Event
 ### Set Content Details
 ######Provide details about the content that will be played.
+*SetContentLength(value as Integer)*<br />
+*SetContentId(value="N/A" as Dynamic)*<br />
+*SetContentTitle(value="N/A" as Dynamic)*<br />
+*SetContentSeriesTitle(value="N/A" as Dynamic)*<br />
+*SetContentCategory(value="N/A" as Dynamic)*<br />
 
-SetContentDetails(content_length=0 as Integer, content_id="N/A" as Dynamic, content_title="N/A" as Dynamic, content_series_title="N/A" as Dynamic, content_category="N/A" as Dynamic)
+These parameters should be set before the playback ends, at which point they will be processed.
 
 All are optional parameters, but setting these with Integer or String value is highly recommended:
 * Set the content length explicitly to allow proper calculation of some playback metrics.
 * Set the other content metadata attributes to include in the "Video Watched" auto-tag event.
 
 ```
-m.LL.SetContentDetails(content_metadata.Length, "1234", content_metadata.Title, content_metadata.TitleSeason, content_metadata.Categories)
+m.Localytics.SetContentLength(content_metadata.Length)
+m.Localytics.SetContentId("12345")
+m.Localytics.SetContentTitle(content_metadata.Title)
+m.Localytics.SetContentSeriesTitle(content_metadata.TitleSeason)
+m.Localytics.SetContentCategory(content_metadata.Categories)
 ```
 
 
@@ -84,7 +107,7 @@ screen.SetPositionNotificationPeriod(1)
 
 #####Now pass the player events to the Localytics SDK to aggegrate playback metrics inside the player event loop.
 
-ProcessPlayerMetrics(event as Object)
+*ProcessPlayerMetrics(event as Object)*
 
 ```
  while true
@@ -92,7 +115,7 @@ ProcessPlayerMetrics(event as Object)
       if type(msg) = "roVideoScreenEvent" then
         
         ' Let Localytics Roku SDK process the msg first
-        m.LL.ProcessPlayerMetrics(msg)
+        m.Localytics.ProcessPlayerMetrics(msg)
         
         ...
         ' Other processing
@@ -103,3 +126,6 @@ ProcessPlayerMetrics(event as Object)
         end if
 end while
 ```
+
+### Other notes
+* This sdk utilizes Registry Section under "com.localytics.*"
