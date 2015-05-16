@@ -2,7 +2,7 @@
 ' Note: 
 ' - "fresh" will clear previous stored values
 ' - "debug" will log some messages
-Function Localytics(appKey As String, sessionTimeout=1800 As Integer, fresh=false As Boolean, debug=false As Boolean) As Object
+Function Localytics(appKey As String, sessionTimeout=1800 As Integer, secured=true As Boolean, fresh=false As Boolean, debug=false As Boolean) As Object
 
     new_localytics = CreateObject("roAssociativeArray")
     
@@ -54,7 +54,15 @@ Function Localytics(appKey As String, sessionTimeout=1800 As Integer, fresh=fals
     new_localytics.patchProfile = ll_patch_profile
     
     ' Fields Creation
-    new_localytics.endpoint = "http://webanalytics.localytics.com/api/v2/applications/"
+    if secured then
+        new_localytics.uriScheme = "https"
+    else
+        new_localytics.uriScheme = "http"
+    end if
+    
+    new_localytics.secured = secured
+    new_localytics.endpoint = new_localytics.uriScheme + "://webanalytics.localytics.com/api/v2/applications/"
+    new_localytics.profileEndpoint = new_localytics.uriScheme + "://profile.localytics.com/v1/apps/"
     new_localytics.appKey = appKey
     new_localytics.sessionTimeout = sessionTimeout
     new_localytics.outstandingRequests = CreateObject("roAssociativeArray") ' Volatile Store for roUrlTransfer response
@@ -619,6 +627,12 @@ End Function
 
 Function ll_upload(url As String)
     http = CreateObject("roUrlTransfer")
+    
+    if m.secured then
+        http.SetCertificatesFile("common:/certs/ca-bundle.crt")
+        http.InitClientCertificates()
+    end if
+    
     http.SetPort(CreateObject("roMessagePort"))
     http.SetUrl(url)
     http.AddHeader("Content-Type", "application/x-www-form-urlencoded")
@@ -677,11 +691,15 @@ Function ll_patch_profile(attributes=invalid As Object)
 
     if attributes = invalid or attributes.IsEmpty() or (not ll_is_valid_string(customerId)) then return -1
     
-    endpoint = "https://profile.localytics.com/v1/apps/" + m.appKey + "/profiles/" + customerId
+    endpoint = m.profileEndpoint + m.appKey + "/profiles/" + customerId
     
     http = CreateObject("roUrlTransfer")
-    http.SetCertificatesFile("common:/certs/ca-bundle.crt")
-    http.InitClientCertificates()
+    
+    if m.secured then
+        http.SetCertificatesFile("common:/certs/ca-bundle.crt")
+        http.InitClientCertificates()
+    end if
+    
     http.SetPort(CreateObject("roMessagePort"))
     http.SetUrl(endpoint)
     

@@ -63,8 +63,6 @@ Function initLocalytics() As Void
     
     m.Localytics.AutoIntegrate()
 
-
-
     'Set Customer Identifiers (Using device info for testing only)
     di = CreateObject("roDeviceInfo")
     m.Localytics.SetCustomerId("" + ll_hash(di.GetDeviceUniqueId()))
