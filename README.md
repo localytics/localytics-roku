@@ -5,7 +5,7 @@ Localytics library is contained in source/localytics/localytics.brs
 ## Initialization
 *Localytics(appKey As String, sessionTimeout=1800 As Integer, secured=true As Boolean) as Object*
 * appKey: your App Key
-* sessionTimeout (optional): Timeout period, # of seconds of inactivity before considering a new session
+* sessionTimeout (optional): Timeout period, # of seconds of inactivity before considering a new session.
 * secured (optional): The sdk will communicate with Localytics over HTTPS if `secured=true`. Setting this to `false` is only recommended for development/testing purpose, e.g. it may be easier to set up proxy and network debug tools over HTTP on Roku.
 
 Create new Localytics instance on globalAA.
@@ -34,6 +34,16 @@ m.Localytics.SetCustomerEmail("test@test.com)
 m.Localytics.SetCustomerFirstName("First")
 m.Localytics.SetCustomerLastName("Last")
 m.Localytics.SetCustomerFullName("Last, First")
+```
+You can set other custom attribute with the following,
+
+*SetProfileAttribute(scope as String, key As String, value=invalid As Dynamic)*
+* scope("org" or "app"): set whether to set "org" or "app" level profile
+* key: Profile attribute name
+* value: Profile attribute value
+
+```
+m.Localytics.SetProfileAttribute("app", "custom_app_attribute", "xxxxxxx")
 ```
 
 ##Custom Dimensions
