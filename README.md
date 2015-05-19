@@ -3,11 +3,14 @@
 Localytics library is contained in source/localytics/localytics.brs
 
 ## Initialization
-*Localytics(appKey As String, sessionTimeout=1800 As Integer) as Object*
+*Localytics(appKey As String, sessionTimeout=1800 As Integer, secured=true As Boolean) as Object*
+* appKey: your App Key
+* sessionTimeout (optional): Timeout period, # of seconds of inactivity before considering a new session
+* secured (optional): The sdk will communicate with Localytics over HTTPS if `secured=true`. Setting this to `false` is only recommended for development/testing purpose, e.g. it may be easier to set up proxy and network debug tools over HTTP on Roku.
 
-Create new Localytics instance on globalAA using your AppKey. optional_session_timeout_in_seconds defaults to 1800 seconds.
+Create new Localytics instance on globalAA.
 
-`m.Localytics = Localytics("xxxxxxxxx-xxxxxxxxxxxxx-xxxxxxxx-xxxxxxxxxxxxxx", optional_session_timeout_in_seconds)`
+`m.Localytics = Localytics("xxxxxxxxx-xxxxxxxxxxxxx-xxxxxxxx-xxxxxxxxxxxxxx")`
 
 
 ######Before Recording
