@@ -82,13 +82,11 @@ Function ll_initialize()
     m.debugLog("ll_initialize()")
     m.restoreSession()
     
-    currentTime = ll_get_timestamp_generator().asSeconds()
-    lastActionTime = m.getSessionValue(m.keys.session_action_time)
-    
     if not m.hasSession() then
         m.openSession()
-    else if currentTime-lastActionTime > 0
-        m.debugLog("Session Timed Out")
+    else if m.sessionTimeout>0 then ' reset Session on Start up if sessionTimeout is 0
+        m.checkSessionTimeout()
+    else
         m.closeSession()
         m.openSession()
     end if
@@ -494,13 +492,15 @@ Function ll_keep_session_alive(source="external" As String)
 End Function
 
 Function ll_check_session_timeout()
-    m.debugLog("ll_check_session_timeout")
     currentTime = ll_get_timestamp_generator().asSeconds()
     lastActionTime = m.getSessionValue(m.keys.session_action_time)
+    diff = currentTime-lastActionTime
     
-    if currentTime-lastActionTime > m.sessionTimeout
-        m.closeSession()
-        m.openSession()
+    m.debugLog("ll_check_session_timeout("+ m.sessionTimeout.toStr() +"): Inactive for " + diff.toStr())
+    
+    if diff > m.sessionTimeout then
+       m.closeSession()
+       m.openSession()
     end if
 End Function
 
