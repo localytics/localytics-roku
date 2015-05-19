@@ -26,7 +26,8 @@ Function Localytics(appKey As String, sessionTimeout=1800 As Integer, secured=tr
     new_localytics.SetCustomerEmail = ll_set_customer_email
     new_localytics.SetCustomerFullName = ll_set_customer_full_name
     new_localytics.SetCustomerFirstName = ll_set_customer_first_name
-    new_localytics.SetCustomerLastName = ll_set_customer_last_name
+    new_localytics.SetCustomerLastName = ll_set_customer_last_name    
+    new_localytics.SetProfileAttribute = ll_set_profile_attribute
 
     ' Shouldn't be call externally
     new_localytics.openSession = ll_open_session
@@ -49,8 +50,6 @@ Function Localytics(appKey As String, sessionTimeout=1800 As Integer, secured=tr
     new_localytics.screenViewed = ll_screen_viewed
     new_localytics.setContentMetadata = ll_set_content_metadata
     new_localytics.sendPlayerMetrics = ll_send_player_metrics
-    
-    new_localytics.setProfileAttribute = ll_set_profile_attribute
     new_localytics.patchProfile = ll_patch_profile
     
     ' Fields Creation
@@ -656,36 +655,36 @@ End Function
 Function ll_set_customer_email(customerEmail As String)
     m.debugLog("ll_set_customer_email()")
 
-    m.setProfileAttribute(m.keys.profile_customer_email, customerEmail)
+    m.SetProfileAttribute("org", m.keys.profile_customer_email, customerEmail)
 End Function
 
 Function ll_set_customer_full_name(fullName As String)
     m.debugLog("ll_set_customer_full_name()")
 
-    m.setProfileAttribute(m.keys.profile_customer_full_name, fullName)
+    m.SetProfileAttribute("org", m.keys.profile_customer_full_name, fullName)
 End Function
 
 Function ll_set_customer_first_name(firstName As String)
     m.debugLog("ll_set_customer_first_name()")
 
-    m.setProfileAttribute(m.keys.profile_customer_first_name, firstName)
+    m.SetProfileAttribute("org", m.keys.profile_customer_first_name, firstName)
 End Function
 
 Function ll_set_customer_last_name(lastName As String)
     m.debugLog("ll_set_customer_last_name()")
 
-    m.setProfileAttribute(m.keys.profile_customer_last_name, lastName)
+    m.SetProfileAttribute("org", m.keys.profile_customer_last_name, lastName)
 End Function
 
-Function ll_set_profile_attribute(key="" As String, value=invalid As Dynamic)
+Function ll_set_profile_attribute(scope as String, key As String, value=invalid As Dynamic)
     if key.Len() > 0 then
         attribute = CreateObject("roAssociativeArray")
         attribute[key] = value
-        m.patchProfile(attribute)
+        m.patchProfile(scope, attribute)
     end if
 End Function
 
-Function ll_patch_profile(attributes=invalid As Object)
+Function ll_patch_profile(scope as String, attributes=invalid As Object)
     customerId = m.getSessionValue(m.keys.profile_customer_id)
     installId = ll_read_registry(m.keys.install_uuid, ll_generate_guid())
 
@@ -711,7 +710,7 @@ Function ll_patch_profile(attributes=invalid As Object)
     http.AddHeader("x-customer-id", customerId)
     http.EnableEncodings(true)
 
-    bodyData = { attributes: attributes, database: "app"}
+    bodyData = { attributes: attributes, database: scope}
         
     ' Must nest it in attributes json
     body = ll_set_params_as_string(bodyData)
