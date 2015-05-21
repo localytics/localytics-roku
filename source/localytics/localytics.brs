@@ -6,10 +6,11 @@ Function Localytics(appKey As String, sessionTimeout=1800 As Integer, secured=tr
 
     new_localytics = CreateObject("roAssociativeArray")
     
+    new_localytics.libraryVersion = "roku_1.0.0"
+    
     ' Function for External Calls
     new_localytics.AutoIntegrate = ll_initialize
     new_localytics.SetCustomDimension = ll_set_custom_dimension
-    new_localytics.ClearCustomDimension = ll_clear_custom_dimension
     new_localytics.TagEvent = ll_tag_event
     new_localytics.TagScreen = ll_tag_screen
     new_localytics.KeepSessionAlive = ll_keep_session_alive
@@ -37,6 +38,7 @@ Function Localytics(appKey As String, sessionTimeout=1800 As Integer, secured=tr
     new_localytics.persistSession = ll_persist_session
     new_localytics.checkSessionTimeout = ll_check_session_timeout
     new_localytics.loadCustomDimensions = ll_load_custom_dimensions
+    new_localytics.clearCustomDimension = ll_clear_custom_dimension
     new_localytics.processOutStandingRequest = ll_process_outstanding_request
     new_localytics.hasSession = ll_has_session
     new_localytics.send = ll_send
@@ -67,6 +69,7 @@ Function Localytics(appKey As String, sessionTimeout=1800 As Integer, secured=tr
     new_localytics.outstandingRequests = CreateObject("roAssociativeArray") ' Volatile Store for roUrlTransfer response
     new_localytics.customDimensions = new_localytics.loadCustomDimensions() 
     new_localytics.debug = debug 'Extra loggin on/off
+    new_localytics.maxScreenFlowLength = 2500
     new_localytics.keys = ll_get_storage_keys()
     new_localytics.constants = ll_get_constants()
        
@@ -233,11 +236,11 @@ Function ll_tag_screen(name as String)
     
     if not ll_is_string(screenFlows)
         screenFlows = Chr(34) + name + Chr(34)
-    else
+        m.setSessionValue(m.keys.screen_flows, screenFlows)
+    else if screenFlows.Len() < m.maxScreenFlowLength then
         screenFlows = screenFlows + "," + Chr(34) + name + Chr(34) 
+        m.setSessionValue(m.keys.screen_flows, screenFlows)
     end if
-    
-    m.setSessionValue(m.keys.screen_flows, screenFlows)
     
     m.screenViewed(name) 'Auto-tag
     
@@ -584,10 +587,15 @@ Function ll_get_header(seq As Integer) As Object
     header.attrs.iu = m.getSessionValue(m.keys.install_uuid)
     
     di = CreateObject("roDeviceInfo")
-    header.attrs.dp = "Roku" 'device uuid
+    header.attrs.dp = "Roku"
     header.attrs.du = ll_hash(di.GetDeviceUniqueId()) 'hashed device uuid
     header.attrs.dov = di.GetVersion() 'device version
     header.attrs.dmo = di.GetModel() 'device model
+    
+    header.attrs.lv = m.libraryVersion
+    header.attrs.dma = "Roku"
+    header.attrs.dll = di.GetCurrentLocale()
+    header.attrs.dlc = di.GetCountryCode()
     
     header.ids = CreateObject("roAssociativeArray")
     return header
