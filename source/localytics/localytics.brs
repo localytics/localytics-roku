@@ -6,7 +6,7 @@ Function Localytics(appKey As String, sessionTimeout=1800 As Integer, secured=tr
 
     new_localytics = CreateObject("roAssociativeArray")
     
-    new_localytics.libraryVersion = "roku_1.0.0"
+    new_localytics.libraryVersion = "roku_3.0.0"
     
     ' Function for External Calls
     new_localytics.AutoIntegrate = ll_initialize
@@ -87,11 +87,8 @@ Function ll_initialize()
     
     if not m.hasSession() then
         m.openSession()
-    else if m.sessionTimeout>0 then ' reset Session on Start up if sessionTimeout is 0
-        m.checkSessionTimeout()
     else
-        m.closeSession()
-        m.openSession()
+        m.checkSessionTimeout(true)
     end if
 End Function
 
@@ -494,16 +491,23 @@ Function ll_keep_session_alive(source="external" As String)
     m.processOutStandingRequest()
 End Function
 
-Function ll_check_session_timeout()
+Function ll_check_session_timeout(isInit=false as Boolean)
     currentTime = ll_get_timestamp_generator().asSeconds()
     lastActionTime = m.getSessionValue(m.keys.session_action_time)
     diff = currentTime-lastActionTime
     
     m.debugLog("ll_check_session_timeout("+ m.sessionTimeout.toStr() +"): Inactive for " + diff.toStr())
     
-    if diff > m.sessionTimeout then
+    if (m.sessionTimeout > 0 and diff > m.sessionTimeout)then
        m.closeSession()
        m.openSession()
+    else if isInit then
+        if diff > m.sessionTimeout then
+            m.closeSession()
+            m.openSession()
+        else
+            m.screenViewed("", lastActionTime)
+        end if
     end if
 End Function
 
@@ -587,6 +591,8 @@ Function ll_get_header(seq As Integer) As Object
     header.attrs.iu = m.getSessionValue(m.keys.install_uuid)
     
     di = CreateObject("roDeviceInfo")
+    ai = CreateObject("roAppInfo")
+    
     header.attrs.dp = "Roku"
     header.attrs.du = ll_hash(di.GetDeviceUniqueId()) 'hashed device uuid
     header.attrs.dov = di.GetVersion() 'device version
@@ -594,9 +600,10 @@ Function ll_get_header(seq As Integer) As Object
     
     header.attrs.lv = m.libraryVersion
     header.attrs.dma = "Roku"
-    header.attrs.dll = di.GetCurrentLocale()
+    header.attrs.dll = di.GetCurrentLocale().Left(2)
     header.attrs.dlc = di.GetCountryCode()
-    
+    header.attrs.av = ai.GetVersion()
+
     header.ids = CreateObject("roAssociativeArray")
     return header
 End Function
