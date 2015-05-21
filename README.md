@@ -57,13 +57,6 @@ m.Localytics.SetCustomDimension(3, "testCD3")
 m.Localytics.SetCustomDimension(5, "testCD5")
 ```
 
-You can also clear a particular CustomDimension.
-
-*ClearCustomDimension(index as Integer)*
-
-`m.Localytics.ClearCustomDimension(1) 'provide the CustomDimension index`
-
-
 
 ## Tag Events
 *TagEvent(name as String, attributes=invalid as Object, customerValueIncrease=0 as Integer)*
