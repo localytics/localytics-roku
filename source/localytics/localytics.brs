@@ -137,7 +137,7 @@ Function ll_open_session()
 End Function
 
 ' Closes a session on Localytics
-Function ll_close_session()
+Function ll_close_session(isInit=false as Boolean)
     m.debugLog("ll_close_session()")
     
     lastActionTime = m.getSessionValue(m.keys.session_action_time)
@@ -146,7 +146,12 @@ Function ll_close_session()
     m.KeepSessionAlive("ll_close_session")
     
     ' Process previous session outstandings (auto-tags)
-    m.screenViewed("", lastActionTime)
+    if isInit then
+        m.screenViewed("[External]", lastActionTime)
+    else
+        m.screenViewed("[Inactivity]", lastActionTime)
+    end if
+        
     m.sendPlayerMetrics()'Attempt to fire player metrics
             
     event = CreateObject("roAssociativeArray")
@@ -498,16 +503,16 @@ Function ll_check_session_timeout(isInit=false as Boolean)
     
     m.debugLog("ll_check_session_timeout("+ m.sessionTimeout.toStr() +"): Inactive for " + diff.toStr())
     
-    if (m.sessionTimeout > 0 and diff > m.sessionTimeout)then
-       m.closeSession()
-       m.openSession()
-    else if isInit then
-        if diff > m.sessionTimeout then
-            m.closeSession()
+    if isInit then
+        if m.sessionTimeout = 0 or diff > m.sessionTimeout then
+            m.closeSession(isInit)
             m.openSession()
         else
-            m.screenViewed("", lastActionTime)
+            m.screenViewed("[External]", lastActionTime)
         end if
+    else if (m.sessionTimeout > 0 and diff > m.sessionTimeout)then
+       m.closeSession(isInit)
+       m.openSession()
     end if
 End Function
 
