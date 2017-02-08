@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="utf-8" ?>
+
+<!--
+ - LocalyticsTask
+ -
+ - This component is a wrapper around the Localytics library.
+ - When localytics.brs is used from this component, the 'm' reference
+ - becomes the local component 'm' and localyticsXXX() functions are
+ - local component functions.
+ -
+ - The <interface> exposes a simple set of fields which map to the
+ - event types.  The main SceneGraph UI thread will write data to
+ - these fields in order to trigger the Task thread to send the
+ - event on the network.
+ -
+ -->
+<component name="LocalyticsTask" extends="Task" >
+
+<script type="text/brightscript" uri="pkg:/source/localytics.brs"/>
+  <interface>
+    <!--
+      -
+      -  event should contain:
+      -   {
+      -     name: <required>
+      -     attributes: <optional>
+      -   }
+      -
+      -->
+    <field id="event" type="assocarray"/>
+    <!--
+      -
+      -  screen should contain:
+      -   {
+      -     name: <required>
+      -   }
+      -
+      -->
+    <field id="screen" type="assocarray"/>
+  </interface>
+</component>

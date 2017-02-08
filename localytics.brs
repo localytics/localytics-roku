@@ -1,3 +1,37 @@
+Function init()
+  print "LocalyticsTask init"
+  m.top.functionName = "execLocalyticsLoop"
+end Function
+
+'Runs as a part of LocalyticsTask'
+Function execLocalyticsLoop()
+  print "LocalyticsTask.execLocalyticsLoop"
+  port = CreateObject("roMessagePort")
+  m.top.observeField("event", port)
+  m.top.observeField("screen", port)
+
+  ' Init analytics
+
+  Localytics(appKey)
+
+  while true
+    msg = wait(0, port)
+    if type(msg) = "roSGNodeEvent" then
+      field = msg.getField()
+      data = msg.getData()
+      if field = "event" then
+        if data.name = invalid then data.name = ""
+        if data.attributes = invalid then data.attributes = {}
+        Localytics.TagEvent(data.name, data.attributes)
+      else if field = "screen" then
+        if data.name = invalid then data.name = ""
+        Localytics.TagScreen(data.name)
+      end if
+    end if
+  end while
+
+End Function
+
 ' Creates a new Localytics instance
 ' Note:
 ' - "fresh" will clear previous stored values
@@ -974,14 +1008,6 @@ Function ll_to_string(variable As Dynamic) As String
     end if
 End Function
 
-Function ll_json_escape_string(variable As Dynamic) As Dynamic
-    if ll_is_string(variable) then
-        return variable.Replace(Chr(34), "\" + Chr(34))
-    else
-        return variable
-    end if
-End Function
-
 Function ll_is_integer(variable As Dynamic) As Boolean
     return (type(variable) = "roInt" or type(variable) = "roInteger" or type(variable) = "Integer")
 End Function
@@ -1000,5 +1026,13 @@ End Function
 Function ll_debug_log(line as String)
     if m.debug = true
         print "<ll_debug> " + line
+    end if
+End Function
+
+Function ll_json_escape_string(variable As Dynamic) As Dynamic
+    if ll_is_string(variable) then
+        return variable.Replace(Chr(34), "\" + Chr(34))
+    else
+        return variable
     end if
 End Function

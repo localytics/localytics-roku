@@ -4,7 +4,7 @@
  ' sets all observers
 Function Init()
     ? "[GridScreen] Init"
-    ' m.Localytics.TagEvent("TestEvent-GridInit")
+    
     m.top.observeField("focusedChild", "OnChildFocused")
     m.rowList = m.top.findNode("RowList")
 

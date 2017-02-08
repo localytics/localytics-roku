@@ -13,6 +13,7 @@
     <!-- main handler -->
     <script type="text/brightscript" uri="pkg:/components/screens/HomeScene/HomeScene.brs" />
     <children>
+        <LocalyticsTask id="LocalyticsTask" />
 
         <GridScreen
             id="GridScreen"

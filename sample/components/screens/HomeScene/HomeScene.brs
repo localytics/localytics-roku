@@ -5,7 +5,11 @@
 Function Init()
     ' listen on port 8089
     ? "[HomeScene] Init"
-    ' m.Localytics.TagEvent("TestEvent-HomeInit")
+
+    m.LocalyticsTask = m.top.findNode("LocalyticsTask")
+    m.LocalyticsTask.control = "RUN"
+    m.LocalyticsTask.event = {name: "HomeScene Init"}
+
     'main grid screen node
     m.GridScreen = m.top.findNode("GridScreen")
     'video player node
@@ -23,6 +27,9 @@ End Function
 ' Row item selected handler
 Sub OnRowItemSelected()
     ? "[HomeScene] OnRowItemSelected"
+
+    m.LocalyticsTask.event = {name: "HomeScene OnRowItemSelected"}
+
     m.GridScreen.visible = "false"
     selectedItem = m.GridScreen.focusedContent
 
