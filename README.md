@@ -137,9 +137,9 @@ end while
 
 ### Using the sample app
 To test the sdk:
-* copy and paste localytics.brs into sample/source/localytics
+* copy and paste localytics.brs into sample/source/
 * Zip up all contents of the sample folder so all files are compressed (as described [here](https://blog.roku.com/developer/2016/02/04/hello-world/))
 * Make a roku account and enable developer mode on the box (homex3, upx2, right, left, right, left, right)
 * Point a web browser to the device IP (something like 10.X.X.X) and enter creds (e.g., rokudev/rokudev)
-* Upload the compressed folder
+* Upload the compressed folder and install
 * Check the [debug console](https://sdkdocs.roku.com/display/sdkdoc/Debugging+Your+Application) by entering `telnet YOUR_ROKU_IP 8085` into a console
