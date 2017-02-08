@@ -2,8 +2,6 @@
 
 Localytics library is contained in source/localytics/localytics.brs
 
-**Note: This repo does not yet support the new scene graph API.**
-
 ## Initialization
 *Localytics(appKey As String, sessionTimeout=1800 As Integer, secured=true As Boolean) as Object*
 * appKey: your App Key
@@ -78,7 +76,6 @@ This function is usually not necessary b/c TagEvent/TagScreen/ProcessPlayerMetri
 
 `m.Localytics.KeepSessionAlive()`
 
-
 ## "Video Watched" Auto-tag Event
 ### Set Content Details
 ######Provide details about the content that will be played.
@@ -136,4 +133,13 @@ end while
 ```
 
 ### Other notes
-* This sdk utilizes Registry Section under "com.localytics.*"
+* This sdk utilizes Registry Section under "com.localytics.\*"
+
+### Using the sample app
+To test the sdk:
+* copy and paste localytics.brs into sample/source/localytics
+* Zip up all contents of the sample folder so all files are compressed (as described [here](https://blog.roku.com/developer/2016/02/04/hello-world/))
+* Make a roku account and enable developer mode on the box (homex3, upx2, right, left, right, left, right)
+* Point a web browser to the device IP (something like 10.X.X.X) and enter creds (e.g., rokudev/rokudev)
+* Upload the compressed folder
+* Check the [debug console](https://sdkdocs.roku.com/display/sdkdoc/Debugging+Your+Application) by entering `telnet YOUR_ROKU_IP 8085` into a console
