@@ -2,6 +2,8 @@
 
 Localytics library is contained in source/localytics/localytics.brs
 
+**Note: This repo does not yet support the new scene graph API.**
+
 ## Initialization
 *Localytics(appKey As String, sessionTimeout=1800 As Integer, secured=true As Boolean) as Object*
 * appKey: your App Key
@@ -19,11 +21,11 @@ Call AutoIntegrate will handle open/close session depending on optional_session_
 `m.Localytics.AutoIntegrate()`
 
 ##Set Profile Information
-*SetCustomerId(value As String)*<br /> 
-*SetCustomerEmail(value As String)*<br /> 
-*SetCustomerFirstName(value As String)*<br /> 
-*SetCustomerLastName(value As String)*<br /> 
-*SetCustomerFullName(value As String)* 
+*SetCustomerId(value As String)*<br />
+*SetCustomerEmail(value As String)*<br />
+*SetCustomerFirstName(value As String)*<br />
+*SetCustomerLastName(value As String)*<br />
+*SetCustomerFullName(value As String)*
 
 If available, CustomerId should be set. Email and name fields are also available to further identify the user Profile.
 
@@ -119,10 +121,10 @@ screen.SetPositionNotificationPeriod(1)
  while true
     msg = wait(0, port)
       if type(msg) = "roVideoScreenEvent" then
-        
+
         ' Let Localytics Roku SDK process the msg first
         m.Localytics.ProcessPlayerMetrics(msg)
-        
+
         ...
         ' Other processing
         ...
