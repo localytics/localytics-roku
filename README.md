@@ -136,8 +136,9 @@ end while
 * This sdk utilizes Registry Section under "com.localytics.\*"
 
 ### Using the sample app
-To test the sdk:
-* copy and paste localytics.brs into sample/source/
+This repo includes a sample app from Roku to test scene graph apps. To test the sdk:
+* Replace your Localytics app key in main.brs
+* Copy and paste localytics.brs into sample/source/
 * Zip up all contents of the sample folder so all files are compressed (as described [here](https://blog.roku.com/developer/2016/02/04/hello-world/))
 * Make a roku account and enable developer mode on the box (homex3, upx2, right, left, right, left, right)
 * Point a web browser to the device IP (something like 10.X.X.X) and enter creds (e.g., rokudev/rokudev)

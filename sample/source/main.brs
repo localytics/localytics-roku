@@ -7,13 +7,16 @@
     port = CreateObject("roMessagePort")
     screen.SetMessagePort(port)
 
-
     'initialize Localytics
-    print "Initialize initLocalytics"
-    initLocalytics()
+    appKey = "248e08688d5f4e2e19b6ead-14de4cd2-e974-11e6-8a2a-0021f941005d"
+    m.Localytics = Localytics(appKey)
+    m.Localytics.AutoIntegrate()
+    customerID = "customer1"
+    m.Localytics.SetCustomerId(customerID)
+    print "Localytics Initialized"
+    m.Localytics.TagEvent("Localytics Initialized")
 
     screen.Show()
-
 
     oneRow = GetApiArray()
     list = [
@@ -39,18 +42,6 @@
         screen = invalid
     end if
 end sub
-
-Function initLocalytics()
-
-    ' Create new Localytics instance on globalAA
-    m.Localytics = Localytics("248e08688d5f4e2e19b6ead-14de4cd2-e974-11e6-8a2a-0021f941005d") ' Use Your AppKey here
-    m.Localytics.AutoIntegrate()
-    customerID = "customer1"
-    m.Localytics.SetCustomerId(customerID)
-    print "Tag Event : TestEvent-initLocalytics"
-    m.Localytics.TagEvent("TestEvent-initLocalytics")
-
-End Function
 
 Function ParseXMLContent(list As Object)
     RowItems = createObject("RoSGNode","ContentNode")
