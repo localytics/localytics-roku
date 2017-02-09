@@ -395,7 +395,7 @@ Function ll_process_player_metrics(event as Object)
             ll_set_session_value(m.localytics.keys.auto_playback_watched, "", false, false)
             ll_set_session_value(m.localytics.keys.auto_playback_paused_session, "", false, false)
             'Attempt to fire player metrics
-            ll_sendPlayerMetrics()
+            ll_send_player_metrics()
 
 '        else if event.isStreamSegmentInfo()
 '            ll_debug_log("ll_process_player_metrics(Type: isStreamSegmentInfo, Index: " + event.GetIndex().ToStr() + ", SegUrl: " + event.GetInfo()["SegUrl"] + ")")
@@ -862,6 +862,7 @@ End Function
 
 ' True if the instance has been initialized
 Function ll_has_session() As Boolean
+    ll_debug_log("ll_has_session() -> " + ll_to_string(m.localytics.session))
     return m.localytics.session <> invalid
 End Function
 
