@@ -1,31 +1,31 @@
 Function init()
-  m.top.functionName = "execLocalyticsLoop"
+    m.top.functionName = "execLocalyticsLoop"
 end Function
 
 'Runs as a part of LocalyticsTask'
 Function execLocalyticsLoop()
-  port = CreateObject("roMessagePort")
-  m.top.observeField("event", port)
-  m.top.observeField("screen", port)
+    port = CreateObject("roMessagePort")
+    m.top.observeField("event", port)
+    m.top.observeField("screen", port)
 
-  ' Paste your app key here'
-  appKey = "248e08688d5f4e2e19b6ead-14de4cd2-e974-11e6-8a2a-0021f941005d"
-  initLocalytics(appKey)
+    ' Paste your app key here'
+    appKey = "248e08688d5f4e2e19b6ead-14de4cd2-e974-11e6-8a2a-0021f941005d"
+    initLocalytics(appKey)
 
-  while true
-    msg = wait(0, port)
-    if type(msg) = "roSGNodeEvent" then
-      field = msg.getField()
-      data = msg.getData()
-      if field = "event" then
-        if data.name = invalid then data.name = ""
-        ll_tag_event(data.name)
-      else if field = "screen" then
-        if data.name = invalid then data.name = ""
-        ll_tag_screen(data.name)
-      end if
-    end if
-  end while
+    while true
+        msg = wait(0, port)
+        if type(msg) = "roSGNodeEvent" then
+            field = msg.getField()
+            data = msg.getData()
+            if field = "event" then
+                if data.name = invalid then data.name = ""
+                ll_tag_event(data.name)
+            else if field = "screen" then
+                if data.name = invalid then data.name = ""
+                ll_tag_screen(data.name)
+            end if
+        end if
+    end while
 
 End Function
 
@@ -33,7 +33,7 @@ End Function
 ' Note:
 ' - "fresh" will clear previous stored values
 ' - "debug" will log some messages
-Function initLocalytics(appKey As String, sessionTimeout=1800 As Integer, secured=true As Boolean, fresh=false As Boolean, debug=false As Boolean) As Void
+Function initLocalytics(appKey As String, sessionTimeout=1800 As Integer, secured=true As Boolean, fresh=false As Boolean, debug=true As Boolean) As Void
     new_localytics = CreateObject("roAssociativeArray")
     m.localytics = new_localytics
 
@@ -47,7 +47,7 @@ Function initLocalytics(appKey As String, sessionTimeout=1800 As Integer, secure
     end if
 
     new_localytics.secured = secured
-    new_localytics.endpoint = new_localytics.uriScheme + "://webanalytics.localytics.com/api/v2/applications/"
+    new_localytics.endpoint = new_localytics.uriScheme + "://analytics.localytics.com/api/v2/applications/"
     new_localytics.profileEndpoint = new_localytics.uriScheme + "://profile.localytics.com/v1/apps/"
     new_localytics.appKey = appKey
     new_localytics.sessionTimeout = sessionTimeout
@@ -122,8 +122,8 @@ End Function
 Function ll_close_session(isInit=false as Boolean)
     ll_debug_log("ll_close_session()")
 
-    lastActionTime = ll_get_session_value(m.localytics.keys.session_action_time)
-    sessionTime = ll_get_session_value(m.localytics.keys.session_open_time)
+    lastActionTime = ll_get_session_value(m.localytics.keys.session_action_time, true)
+    sessionTime = ll_get_session_value(m.localytics.keys.session_open_time, true)
 
     ll_keep_session_alive("ll_close_session")
 
@@ -180,9 +180,9 @@ End Function
 
 ' Tags an event
 Function ll_tag_event(name as String, attributes=invalid as Object, customerValueIncrease=0 as Integer)
-    print "Localytics: tag event"
     ll_debug_log("ll_tag_event()")
     if ll_has_session() = false then
+        ll_debug_log("Localytics tag event failed: no session")
         return -1
     end if
     ll_check_session_timeout()
@@ -236,7 +236,7 @@ Function ll_screen_viewed(currentScreen="" as String, lastActionTime=-1 as Integ
     ll_debug_log("ll_screen_viewed()")
 
     previousScreen = ll_get_session_value(m.localytics.keys.auto_previous_screen)
-    previousScreenTime = ll_get_session_value(m.localytics.keys.auto_previous_screen_time)
+    previousScreenTime = ll_get_session_value(m.localytics.keys.auto_previous_screen_time, true)
 
     if lastActionTime > -1 then
         time = lastActionTime
@@ -328,7 +328,7 @@ Function ll_process_player_metrics(event as Object)
         sectionName = m.localytics.constants.section_playback
         message = "Type: unexpected"
 
-        pausedSession = ll_get_session_value(m.localytics.keys.auto_playback_paused_session)
+        pausedSession = ll_get_session_value(m.localytics.keys.auto_playback_paused_session, false, true)
         if not (event.isResumed() or (ll_is_boolean(pausedSession) and pausedSession = true)) then
             ll_keep_session_alive("ll_process_player_metrics")
         end if
@@ -342,8 +342,8 @@ Function ll_process_player_metrics(event as Object)
         else if event.isPlaybackPosition() then
             message = "Type: isPlaybackPosition,  Index: " + event.GetIndex().ToStr()
 
-            bufferStartTime = ll_get_session_value(m.localytics.keys.auto_playback_buffer_start)
-            bufferTime = ll_get_session_value(m.localytics.keys.auto_playback_buffer)
+            bufferStartTime = ll_get_session_value(m.localytics.keys.auto_playback_buffer_start, true)
+            bufferTime = ll_get_session_value(m.localytics.keys.auto_playback_buffer, true)
             if ll_is_integer(bufferStartTime) and (not ll_is_integer(bufferTime)) then
                 'Only set buffer time if it hasn't been set yet
                 timestamp = ll_get_timestamp_generator()
@@ -354,7 +354,7 @@ Function ll_process_player_metrics(event as Object)
 
             playbackPosition = event.GetIndex().ToStr()
 
-            timeWatched = ll_get_session_value(m.localytics.keys.auto_playback_watched)
+            timeWatched = ll_get_session_value(m.localytics.keys.auto_playback_watched, true)
             if (not ll_is_integer(timeWatched)) or playbackPosition > timeWatched then 'Same as MAX(timeWatched, playbackPosition)
                 ll_set_session_value(m.localytics.keys.auto_playback_watched, playbackPosition, false, false)
                 ll_write_registry(m.localytics.keys.auto_playback_watched, playbackPosition, false, sectionName)
@@ -481,7 +481,7 @@ End Function
 
 Function ll_check_session_timeout(isInit=false as Boolean)
     currentTime = ll_get_timestamp_generator().asSeconds()
-    lastActionTime = ll_get_session_value(m.localytics.keys.session_action_time)
+    lastActionTime = ll_get_session_value(m.localytics.keys.session_action_time, true)
     diff = currentTime-lastActionTime
 
     ll_debug_log("ll_check_session_timeout("+ m.localytics.sessionTimeout.toStr() +"): Inactive for " + diff.toStr())
@@ -609,7 +609,7 @@ Function ll_send(event As Object)
 
     timestamp = ll_get_timestamp_generator()
 
-    seq = ll_get_session_value(m.localytics.keys.sequence_index)
+    seq = ll_get_session_value(m.localytics.keys.sequence_index, true)
     header = ll_get_header(seq)
     ll_set_session_value(m.localytics.keys.sequence_index, seq+1)
 
@@ -866,20 +866,28 @@ Function ll_has_session() As Boolean
 End Function
 
 ' Manages the current instance's variables, ie. appKey, sessionStartTime, clientId ...
-Function ll_get_session_value(param As String) As Dynamic
+Function ll_get_session_value(param As String, decimal=false as Boolean, bool=false as Boolean) As Dynamic
     if ll_has_session() AND param <> invalid then
-        return m["session"][param]
+        if decimal then
+            return ll_read_registry(param).toInt()
+        else if bool then
+            booleanValue = ll_read_registry(param)
+
+            if booleanValue = "True" then
+                return true
+            end if
+
+            return false
+        end if
+
+        return ll_read_registry(param)
     end if
 
     return ""
 End Function
 Function ll_set_session_value(param As String, value As Dynamic, flush=false As Boolean, persist=true As Boolean)
     if ll_has_session() AND param <> invalid AND value <> invalid then
-        m["session"][param] = value
-
-        if persist then
-            ll_write_registry(param, ll_to_string(value), flush)
-        end if
+        ll_write_registry(param, ll_to_string(value), flush)
     end if
 End Function
 
@@ -961,9 +969,11 @@ End Function
 Function ll_is_integer(variable As Dynamic) As Boolean
     return (type(variable) = "roInt" or type(variable) = "roInteger" or type(variable) = "Integer")
 End Function
+
 Function ll_is_boolean(variable As Dynamic) As Boolean
     return (type(variable) = "roBoolean" or type(variable) = "Boolean")
 End Function
+
 Function ll_is_string(variable As Dynamic) As Boolean
     return (type(variable) = "roString" or type(variable) = "String")
 End Function

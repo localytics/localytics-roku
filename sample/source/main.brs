@@ -12,7 +12,7 @@
     initLocalytics(appKey)
     customerID = "customer1"
     ll_set_customer_id(customerID)
-    ' ll_initialize_session()
+    ll_initialize_session()
 
     screen.Show()
 
