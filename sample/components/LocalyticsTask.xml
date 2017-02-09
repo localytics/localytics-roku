@@ -5,7 +5,7 @@
  -
  - This component is a wrapper around the Localytics library.
  - When localytics.brs is used from this component, the 'm' reference
- - becomes the local component 'm' and localyticsXXX() functions are
+ - becomes the local component 'm' and LocalyticsTask functions are
  - local component functions.
  -
  - The <interface> exposes a simple set of fields which map to the

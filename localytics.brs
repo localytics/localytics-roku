@@ -1,18 +1,16 @@
 Function init()
-  print "LocalyticsTask init"
   m.top.functionName = "execLocalyticsLoop"
 end Function
 
 'Runs as a part of LocalyticsTask'
 Function execLocalyticsLoop()
-  print "LocalyticsTask.execLocalyticsLoop"
   port = CreateObject("roMessagePort")
   m.top.observeField("event", port)
   m.top.observeField("screen", port)
 
-  ' Init analytics
-
-  Localytics(appKey)
+  ' Paste your app key here'
+  appKey = "248e08688d5f4e2e19b6ead-14de4cd2-e974-11e6-8a2a-0021f941005d"
+  initLocalytics(appKey)
 
   while true
     msg = wait(0, port)
@@ -21,11 +19,10 @@ Function execLocalyticsLoop()
       data = msg.getData()
       if field = "event" then
         if data.name = invalid then data.name = ""
-        if data.attributes = invalid then data.attributes = {}
-        Localytics.TagEvent(data.name, data.attributes)
+        ll_tag_event(data.name)
       else if field = "screen" then
         if data.name = invalid then data.name = ""
-        Localytics.TagScreen(data.name)
+        ll_tag_screen(data.name)
       end if
     end if
   end while
@@ -36,59 +33,13 @@ End Function
 ' Note:
 ' - "fresh" will clear previous stored values
 ' - "debug" will log some messages
-Function Localytics(appKey As String, sessionTimeout=1800 As Integer, secured=true As Boolean, fresh=false As Boolean, debug=false As Boolean) As Object
-
+Function initLocalytics(appKey As String, sessionTimeout=1800 As Integer, secured=true As Boolean, fresh=false As Boolean, debug=false As Boolean) As Void
     new_localytics = CreateObject("roAssociativeArray")
+    m.localytics = new_localytics
 
+    new_localytics.debug = debug 'Extra loggin on/off
     new_localytics.libraryVersion = "roku_3.0.0"
 
-    ' Function for External Calls
-    new_localytics.AutoIntegrate = ll_initialize
-    new_localytics.SetCustomDimension = ll_set_custom_dimension
-    new_localytics.TagEvent = ll_tag_event
-    new_localytics.TagScreen = ll_tag_screen
-    new_localytics.KeepSessionAlive = ll_keep_session_alive
-
-    new_localytics.SetContentLength = ll_set_content_length
-    new_localytics.SetContentId = ll_set_content_id
-    new_localytics.SetContentTitle = ll_set_content_title
-    new_localytics.SetContentSeriesTitle = ll_set_content_series_title
-    new_localytics.SetContentCategory = ll_set_content_category
-
-    new_localytics.ProcessPlayerMetrics = ll_process_player_metrics
-
-    new_localytics.SetCustomerId = ll_set_customer_id
-    new_localytics.SetCustomerEmail = ll_set_customer_email
-    new_localytics.SetCustomerFullName = ll_set_customer_full_name
-    new_localytics.SetCustomerFirstName = ll_set_customer_first_name
-    new_localytics.SetCustomerLastName = ll_set_customer_last_name
-    new_localytics.SetProfileAttribute = ll_set_profile_attribute
-
-    ' Shouldn't be call externally
-    new_localytics.openSession = ll_open_session
-    new_localytics.closeSession = ll_close_session
-    new_localytics.deleteSessionData = ll_delete_session_data
-    new_localytics.restoreSession = ll_restore_session
-    new_localytics.persistSession = ll_persist_session
-    new_localytics.checkSessionTimeout = ll_check_session_timeout
-    new_localytics.loadCustomDimensions = ll_load_custom_dimensions
-    new_localytics.clearCustomDimension = ll_clear_custom_dimension
-    new_localytics.processOutStandingRequest = ll_process_outstanding_request
-    new_localytics.hasSession = ll_has_session
-    new_localytics.send = ll_send
-    new_localytics.getHeader = ll_get_header
-    new_localytics.getSessionValue = ll_get_session_value
-    new_localytics.setSessionValue = ll_set_session_value
-    new_localytics.debugLog = ll_debug_log
-    new_localytics.upload = ll_upload
-    new_localytics.isPersistedAcrossSession = ll_is_persisted_across_session
-
-    new_localytics.screenViewed = ll_screen_viewed
-    new_localytics.setContentMetadata = ll_set_content_metadata
-    new_localytics.sendPlayerMetrics = ll_send_player_metrics
-    new_localytics.patchProfile = ll_patch_profile
-
-    ' Fields Creation
     if secured then
         new_localytics.uriScheme = "https"
     else
@@ -101,8 +52,7 @@ Function Localytics(appKey As String, sessionTimeout=1800 As Integer, secured=tr
     new_localytics.appKey = appKey
     new_localytics.sessionTimeout = sessionTimeout
     new_localytics.outstandingRequests = CreateObject("roAssociativeArray") ' Volatile Store for roUrlTransfer response
-    new_localytics.customDimensions = new_localytics.loadCustomDimensions()
-    new_localytics.debug = debug 'Extra loggin on/off
+    new_localytics.customDimensions = ll_load_custom_dimensions()
     new_localytics.maxScreenFlowLength = 2500
     new_localytics.keys = ll_get_storage_keys()
     new_localytics.constants = ll_get_constants()
@@ -110,119 +60,117 @@ Function Localytics(appKey As String, sessionTimeout=1800 As Integer, secured=tr
     if fresh then
         new_localytics.deleteSessionData(true)
     end if
-
-    return new_localytics
 End Function
 
 'Initializes the session
-Function ll_initialize()
-    m.debugLog("ll_initialize()")
-    m.restoreSession()
+Function ll_initialize_session()
+    ll_debug_log("ll_initialize_session()")
+    ll_restore_session()
 
-    if not m.hasSession() then
-        m.openSession()
+    if not ll_has_session() then
+        ll_open_session()
     else
-        m.checkSessionTimeout(true)
+        ll_check_session_timeout(true)
     end if
 End Function
 
 ' Opens a session on Localytics
 Function ll_open_session()
-    m.debugLog("ll_open_session()")
-    m.session = CreateObject("roAssociativeArray")
-    m.setSessionValue(m.keys.install_uuid, ll_read_registry(m.keys.install_uuid, ll_generate_guid()))
-    m.setSessionValue(m.keys.session_uuid, ll_generate_guid(), false)
-    m.setSessionValue(m.keys.session_index, ll_read_registry(m.keys.session_index, "0").ToInt() + 1, false)
-    m.setSessionValue(m.keys.sequence_index, 0, false)
+    ll_debug_log("ll_open_session()")
+    m.localytics.session = CreateObject("roAssociativeArray")
+    ll_set_session_value(m.localytics.keys.install_uuid, ll_read_registry(m.localytics.keys.install_uuid, ll_generate_guid()))
+    ll_set_session_value(m.localytics.keys.session_uuid, ll_generate_guid(), false)
+    ll_set_session_value(m.localytics.keys.session_index, ll_read_registry(m.localytics.keys.session_index, "0").ToInt() + 1, false)
+    ll_set_session_value(m.localytics.keys.sequence_index, 0, false)
 
     for i=0 to 9
         cdKey = "c" + i.ToStr()
-        m.setSessionValue(cdKey, ll_read_registry(cdKey), false)
+        ll_set_session_value(cdKey, ll_read_registry(cdKey), false)
     next
 
     ' Save session start time
     timestamp = ll_get_timestamp_generator()
     time = timestamp.asSeconds()
-    m.setSessionValue(m.keys.session_open_time, time, false)
-    m.setSessionValue(m.keys.session_action_time, time)
+    ll_set_session_value(m.localytics.keys.session_open_time, time, false)
+    ll_set_session_value(m.localytics.keys.session_action_time, time)
 
-    m.persistSession()
+    ll_persist_session()
 
     'Session Open
     event = CreateObject("roAssociativeArray")
     event.dt = "s"
     event.ct = time 'Open Time
-    event.u = m.getSessionValue(m.keys.session_uuid)
-    event.nth = m.getSessionValue(m.keys.session_index) 'Need to persist this value
+    event.u = ll_get_session_value(m.localytics.keys.session_uuid)
+    event.nth = ll_get_session_value(m.localytics.keys.session_index) 'Need to persist this value
     event.mc = "" '?? null is ok
     event.mm = "" '?? null is ok
     event.ms = "" '?? null is ok
 
-    customerId = m.getSessionValue(m.keys.profile_customer_id)
+    customerId = ll_get_session_value(m.localytics.keys.profile_customer_id)
     if ll_is_valid_string(customerId) then
         event.cid = customerId
         event.utp = "known"
     else
-        event.cid = m.getSessionValue(m.keys.install_uuid)
+        event.cid = ll_get_session_value(m.localytics.keys.install_uuid)
         event.utp = "anonymous"
     end if
 
-    m.send(event)
+    ll_send(event)
 End Function
 
 ' Closes a session on Localytics
 Function ll_close_session(isInit=false as Boolean)
-    m.debugLog("ll_close_session()")
+    ll_debug_log("ll_close_session()")
 
-    lastActionTime = m.getSessionValue(m.keys.session_action_time)
-    sessionTime = m.getSessionValue(m.keys.session_open_time)
+    lastActionTime = ll_get_session_value(m.localytics.keys.session_action_time)
+    sessionTime = ll_get_session_value(m.localytics.keys.session_open_time)
 
-    m.KeepSessionAlive("ll_close_session")
+    ll_keep_session_alive("ll_close_session")
 
     ' Process previous session outstandings (auto-tags)
     if isInit then
-        m.screenViewed("[External]", lastActionTime)
+        ll_screen_viewed("[External]", lastActionTime)
     else
-        m.screenViewed("[Inactivity]", lastActionTime)
+        ll_screen_viewed("[Inactivity]", lastActionTime)
     end if
 
-    m.sendPlayerMetrics()'Attempt to fire player metrics
+    ll_sendPlayerMetrics()'Attempt to fire player metrics
 
     event = CreateObject("roAssociativeArray")
     event.dt = "c"
     event.u = ll_generate_guid()
     event.ss = sessionTime
-    event.su = m.getSessionValue(m.keys.session_uuid)
+    event.su = ll_get_session_value(m.localytics.keys.session_uuid)
     event.ct = lastActionTime ' TODO Double check these fields
     event.ctl = lastActionTime - sessionTime
     event.cta = lastActionTime - sessionTime
 
-    screenFlows = m.getSessionValue(m.keys.screen_flows)
+    screenFlows = ll_get_session_value(m.localytics.keys.screen_flows)
     if ll_is_string(screenFlows) then
         event.fl = "[" + screenFlows +"]" 'Screen flows
     else
         event.fl = "[]"
     end if
 
-    customerId = m.getSessionValue(m.keys.profile_customer_id)
+    customerId = ll_get_session_value(m.localytics.keys.profile_customer_id)
     if ll_is_valid_string(customerId) then
         event.cid = customerId
         event.utp = "known"
     else
-        event.cid = m.getSessionValue(m.keys.install_uuid)
+        event.cid = ll_get_session_value(m.localytics.keys.install_uuid)
         event.utp = "anonymous"
     end if
 
-    m.send(event)
+    ll_send(event)
 
-    m.deleteSessionData()
+    ll_delete_session_data()
 End Function
 
 Function ll_delete_session_data(clearAllFields=false As Boolean, section="com.localytics" As String)
     sec = CreateObject("roRegistrySection", section)
 
     for each key in sec.GetKeyList()
-        if clearAllFields or not m.isPersistedAcrossSession(key) then
+        if clearAllFields or not ll_is_persisted_across_session(key) then
             sec.Delete(key)
         end if
     next
@@ -232,12 +180,13 @@ End Function
 
 ' Tags an event
 Function ll_tag_event(name as String, attributes=invalid as Object, customerValueIncrease=0 as Integer)
-    m.debugLog("ll_tag_event()")
-    if m.HasSession() = false then
+    print "Localytics: tag event"
+    ll_debug_log("ll_tag_event()")
+    if ll_has_session() = false then
         return -1
     end if
-    m.checkSessionTimeout()
-    m.KeepSessionAlive("ll_tag_event")
+    ll_check_session_timeout()
+    ll_keep_session_alive("ll_tag_event")
 
     timestamp = ll_get_timestamp_generator()
 
@@ -245,49 +194,49 @@ Function ll_tag_event(name as String, attributes=invalid as Object, customerValu
     event.dt = "e"
     event.ct = timestamp.asSeconds()
     event.u = ll_generate_guid()
-    event.su = m.getSessionValue(m.keys.session_uuid)
+    event.su = ll_get_session_value(m.localytics.keys.session_uuid)
     event.v = customerValueIncrease '??
     event.n = name 'Event name
 
-    customerId = m.getSessionValue(m.keys.profile_customer_id)
+    customerId = ll_get_session_value(m.localytics.keys.profile_customer_id)
     if ll_is_valid_string(customerId) then
         event.cid = customerId
         event.utp = "known"
     else
-        event.cid = m.getSessionValue(m.keys.install_uuid)
+        event.cid = ll_get_session_value(m.localytics.keys.install_uuid)
         event.utp = "anonymous"
     end if
 
     event.attrs = attributes
 
-    m.send(event)
+    ll_send(event)
 End Function
 
 Function ll_tag_screen(name as String)
-    m.debugLog("ll_tag_screen()")
-    m.checkSessionTimeout()
-    m.KeepSessionAlive("ll_tag_screen")
+    ll_debug_log("ll_tag_screen()")
+    ll_check_session_timeout()
+    ll_keep_session_alive("ll_tag_screen")
 
-    screenFlows = m.getSessionValue(m.keys.screen_flows)
+    screenFlows = ll_get_session_value(m.localytics.keys.screen_flows)
 
     if not ll_is_string(screenFlows)
         screenFlows = Chr(34) + name + Chr(34)
-        m.setSessionValue(m.keys.screen_flows, screenFlows)
-    else if screenFlows.Len() < m.maxScreenFlowLength then
+        ll_set_session_value(m.localytics.keys.screen_flows, screenFlows)
+    else if screenFlows.Len() < m.localytics.maxScreenFlowLength then
         screenFlows = screenFlows + "," + Chr(34) + name + Chr(34)
-        m.setSessionValue(m.keys.screen_flows, screenFlows)
+        ll_set_session_value(m.localytics.keys.screen_flows, screenFlows)
     end if
 
-    m.screenViewed(name) 'Auto-tag
+    ll_screen_viewed(name) 'Auto-tag
 
-    m.debugLog("Screen Flows: " + m.getSessionValue(m.keys.screen_flows))
+    ll_debug_log("Screen Flows: " + ll_get_session_value(m.localytics.keys.screen_flows))
 End Function
 
 Function ll_screen_viewed(currentScreen="" as String, lastActionTime=-1 as Integer)
-    m.debugLog("ll_screen_viewed()")
+    ll_debug_log("ll_screen_viewed()")
 
-    previousScreen = m.getSessionValue(m.keys.auto_previous_screen)
-    previousScreenTime = m.getSessionValue(m.keys.auto_previous_screen_time)
+    previousScreen = ll_get_session_value(m.localytics.keys.auto_previous_screen)
+    previousScreenTime = ll_get_session_value(m.localytics.keys.auto_previous_screen_time)
 
     if lastActionTime > -1 then
         time = lastActionTime
@@ -299,271 +248,271 @@ Function ll_screen_viewed(currentScreen="" as String, lastActionTime=-1 as Integ
     if  ll_is_valid_string(previousScreen) and ll_is_integer(previousScreenTime) then
         attributes = CreateObject("roAssociativeArray")
         if currentScreen = "" then
-            currentScreen = m.constants.not_available
+            currentScreen = m.localytics.constants.not_available
         end if
         timeOnScreen = time - previousScreenTime
-        attributes[m.constants.current_screen] = currentScreen
-        attributes[m.constants.previous_screen] = previousScreen
-        attributes[m.constants.time_on_screen] = timeOnScreen
+        attributes[m.localytics.constants.current_screen] = currentScreen
+        attributes[m.localytics.constants.previous_screen] = previousScreen
+        attributes[m.localytics.constants.time_on_screen] = timeOnScreen
 
-        m.debugLog("ll_screen_viewed(currentScreen: " + currentScreen + ", previousScreen: " + previousScreen + ", timeOnScreen: " + timeOnScreen.ToStr() + ")")
+        ll_debug_log("ll_screen_viewed(currentScreen: " + currentScreen + ", previousScreen: " + previousScreen + ", timeOnScreen: " + timeOnScreen.ToStr() + ")")
 
-        m.TagEvent(m.constants.event_screen_viewed, attributes)
+        ll_tag_event(m.localytics.constants.event_screen_viewed, attributes)
     end if
 
-    m.setSessionValue(m.keys.auto_previous_screen, currentScreen, false)
-    m.setSessionValue(m.keys.auto_previous_screen_time, time)
+    ll_set_session_value(m.localytics.keys.auto_previous_screen, currentScreen, false)
+    ll_set_session_value(m.localytics.keys.auto_previous_screen_time, time)
 End Function
 
 Function ll_set_custom_dimension(i as Integer, value as String)
-    m.debugLog("ll_set_custom_dimension("+ i.toStr() + ", " + value + ")")
+    ll_debug_log("ll_set_custom_dimension("+ i.toStr() + ", " + value + ")")
     if i>=0 and i < 10 and value <> invalid then
         cdKey = "c"+ i.ToStr()
-        m.customDimensions[cdKey] = value
+        m.localytics.customDimensions[cdKey] = value
         ll_write_registry(cdKey, value, true)
     end if
 End Function
 
 Function ll_clear_custom_dimension(i as Integer)
-    m.debugLog("ll_clear_custom_dimension("+ i.toStr() + ")")
-    m.SetCustomDimension(i, "")
+    ll_debug_log("ll_clear_custom_dimension("+ i.toStr() + ")")
+    ll_set_custom_dimension(i, "")
 End Function
 
 
 ' Sets Content Metadata for auto-tagging. If "value" is empty, the key is deleted.
 Function ll_set_content_metadata(key as String, value as Dynamic, required=false as Boolean, flush=true as Boolean)
-    m.debugLog("ll_set_content_metadata("+ key + ", " + ll_to_string(value) + ")")
+    ll_debug_log("ll_set_content_metadata("+ key + ", " + ll_to_string(value) + ")")
 
     if ll_is_string(key)
         strValue = ll_to_string(value)
         if ll_is_valid_string(strValue) then
-            ll_write_registry(key, strValue, flush, m.constants.section_metadata)
+            ll_write_registry(key, strValue, flush, m.localytics.constants.section_metadata)
         else if required then
-            ll_write_registry(key, m.constants.not_available, flush, m.constants.section_metadata) ' Remove the attribute if value is invalid or empty
+            ll_write_registry(key, m.localytics.constants.not_available, flush, m.localytics.constants.section_metadata) ' Remove the attribute if value is invalid or empty
         else
-            ll_delete_registry(key, m.constants.section_metadata, flush)
+            ll_delete_registry(key, m.localytics.constants.section_metadata, flush)
         end if
     end if
 End Function
 
 Function ll_set_content_length(value as Integer, flush=true as Boolean)
-    m.debugLog("ll_set_content_length( Content Length: " + value.ToStr() + ")")
+    ll_debug_log("ll_set_content_length( Content Length: " + value.ToStr() + ")")
 
     if value > 0 then
-        ll_write_registry(m.keys.auto_playback_length, value.ToStr(), flush, m.constants.section_playback)
+        ll_write_registry(m.localytics.keys.auto_playback_length, value.ToStr(), flush, m.localytics.constants.section_playback)
     else
-        ll_delete_registry(m.keys.auto_playback_length, m.constants.section_playback, flush)
+        ll_delete_registry(m.localytics.keys.auto_playback_length, m.localytics.constants.section_playback, flush)
     end if
 End Function
 
 Function ll_set_content_id(value="N/A" as Dynamic)
-    m.setContentMetadata(m.constants.content_id, value, true, true)
+    ll_set_content_metadata(m.localytics.constants.content_id, value, true, true)
 End Function
 
 Function ll_set_content_title(value="N/A" as Dynamic)
-    m.setContentMetadata(m.constants.content_title, value, true, true)
+    ll_set_content_metadata(m.localytics.constants.content_title, value, true, true)
 End Function
 
 Function ll_set_content_series_title(value="N/A" as Dynamic)
-    m.setContentMetadata(m.constants.content_series_title, value, true, true)
+    ll_set_content_metadata(m.localytics.constants.content_series_title, value, true, true)
 End Function
 
 Function ll_set_content_category(value="N/A" as Dynamic)
-    m.setContentMetadata(m.constants.content_category, value, true, true)
+    ll_set_content_metadata(m.localytics.constants.content_category, value, true, true)
 End Function
 
 Function ll_process_player_metrics(event as Object)
-    m.debugLog("ll_process_player_metrics()")
+    ll_debug_log("ll_process_player_metrics()")
 
     if type(event) = "roVideoScreenEvent" or type(event) = "roVideoPlayerEvent" then
-        sectionName = m.constants.section_playback
+        sectionName = m.localytics.constants.section_playback
         message = "Type: unexpected"
 
-        pausedSession = m.getSessionValue(m.keys.auto_playback_paused_session)
+        pausedSession = ll_get_session_value(m.localytics.keys.auto_playback_paused_session)
         if not (event.isResumed() or (ll_is_boolean(pausedSession) and pausedSession = true)) then
-            m.KeepSessionAlive("ll_process_player_metrics")
+            ll_keep_session_alive("ll_process_player_metrics")
         end if
 
         if event.isRequestFailed()
             message = "Type: isRequestFailed, Index: " + event.GetIndex().ToStr() + ", Message: " + event.GetMessage()
 
-            ll_write_registry(m.keys.auto_playback_pending, "true", false, sectionName)
-            ll_write_registry(m.keys.auto_playback_url, event.GetInfo()["Url"], false, sectionName)
-            ll_write_registry(m.keys.auto_playback_end_reason, m.constants.finish_reason_playback_error, true, sectionName)
+            ll_write_registry(m.localytics.keys.auto_playback_pending, "true", false, sectionName)
+            ll_write_registry(m.localytics.keys.auto_playback_url, event.GetInfo()["Url"], false, sectionName)
+            ll_write_registry(m.localytics.keys.auto_playback_end_reason, m.localytics.constants.finish_reason_playback_error, true, sectionName)
         else if event.isPlaybackPosition() then
             message = "Type: isPlaybackPosition,  Index: " + event.GetIndex().ToStr()
 
-            bufferStartTime = m.getSessionValue(m.keys.auto_playback_buffer_start)
-            bufferTime = m.getSessionValue(m.keys.auto_playback_buffer)
+            bufferStartTime = ll_get_session_value(m.localytics.keys.auto_playback_buffer_start)
+            bufferTime = ll_get_session_value(m.localytics.keys.auto_playback_buffer)
             if ll_is_integer(bufferStartTime) and (not ll_is_integer(bufferTime)) then
                 'Only set buffer time if it hasn't been set yet
                 timestamp = ll_get_timestamp_generator()
                 bufferTotal = timestamp.asSeconds() - bufferStartTime
-                ll_write_registry(m.keys.auto_playback_buffer, bufferTotal.ToStr(), false, sectionName)
-                m.setSessionValue(m.keys.auto_playback_buffer, bufferTotal, false, false)
+                ll_write_registry(m.localytics.keys.auto_playback_buffer, bufferTotal.ToStr(), false, sectionName)
+                ll_set_session_value(m.localytics.keys.auto_playback_buffer, bufferTotal, false, false)
             end if
 
             playbackPosition = event.GetIndex().ToStr()
 
-            timeWatched = m.getSessionValue(m.keys.auto_playback_watched)
+            timeWatched = ll_get_session_value(m.localytics.keys.auto_playback_watched)
             if (not ll_is_integer(timeWatched)) or playbackPosition > timeWatched then 'Same as MAX(timeWatched, playbackPosition)
-                m.setSessionValue(m.keys.auto_playback_watched, playbackPosition, false, false)
-                ll_write_registry(m.keys.auto_playback_watched, playbackPosition, false, sectionName)
+                ll_set_session_value(m.localytics.keys.auto_playback_watched, playbackPosition, false, false)
+                ll_write_registry(m.localytics.keys.auto_playback_watched, playbackPosition, false, sectionName)
             end if
 
-            ll_write_registry(m.keys.auto_playback_current_time, playbackPosition, true, sectionName)
+            ll_write_registry(m.localytics.keys.auto_playback_current_time, playbackPosition, true, sectionName)
         else if event.isStreamStarted()
             message = "Type: isStreamStarted,  Index: " + event.GetIndex().ToStr() + ", Url: " + event.GetInfo()["Url"]
 
             IsUnderrun = event.GetInfo()["IsUnderrun"]
             if IsUnderrun = false then
                 timestamp = ll_get_timestamp_generator()
-                m.setSessionValue(m.keys.auto_playback_buffer_start, timestamp.asSeconds(), false, false)
+                ll_set_session_value(m.localytics.keys.auto_playback_buffer_start, timestamp.asSeconds(), false, false)
             end if
 
-            ll_write_registry(m.keys.auto_playback_pending, "true", false, sectionName)
-            ll_write_registry(m.keys.auto_playback_url, event.GetInfo()["Url"], true, sectionName)
+            ll_write_registry(m.localytics.keys.auto_playback_pending, "true", false, sectionName)
+            ll_write_registry(m.localytics.keys.auto_playback_url, event.GetInfo()["Url"], true, sectionName)
         else if event.isFullResult()
             message = "Type: isFullResult"
 
-            ll_write_registry(m.keys.auto_playback_end_reason, m.constants.finish_reason_playback_ended, true, sectionName)
+            ll_write_registry(m.localytics.keys.auto_playback_end_reason, m.localytics.constants.finish_reason_playback_ended, true, sectionName)
         else if event.isPartialResult()
             message = "Type: isPartialResult"
 
-            ll_write_registry(m.keys.auto_playback_end_reason, m.constants.finish_reason_user_exited, true, sectionName)
+            ll_write_registry(m.localytics.keys.auto_playback_end_reason, m.localytics.constants.finish_reason_user_exited, true, sectionName)
         else if event.isPaused()
             message = "Type: isPaused"
-            m.setSessionValue(m.keys.auto_playback_paused_session, true, false, false)
+            ll_set_session_value(m.localytics.keys.auto_playback_paused_session, true, false, false)
         else if event.isResumed()
             message = "Type: isResumed"
-            m.setSessionValue(m.keys.auto_playback_paused_session, false, false, false)
+            ll_set_session_value(m.localytics.keys.auto_playback_paused_session, false, false, false)
         else if event.isScreenClosed()
             message = "Type: isScreenClosed"
 
             ' Clear temporary values
-            m.setSessionValue(m.keys.auto_playback_buffer, "", false, false)
-            m.setSessionValue(m.keys.auto_playback_buffer_start, "", false, false)
-            m.setSessionValue(m.keys.auto_playback_watched, "", false, false)
-            m.setSessionValue(m.keys.auto_playback_paused_session, "", false, false)
+            ll_set_session_value(m.localytics.keys.auto_playback_buffer, "", false, false)
+            ll_set_session_value(m.localytics.keys.auto_playback_buffer_start, "", false, false)
+            ll_set_session_value(m.localytics.keys.auto_playback_watched, "", false, false)
+            ll_set_session_value(m.localytics.keys.auto_playback_paused_session, "", false, false)
             'Attempt to fire player metrics
-            m.sendPlayerMetrics()
+            ll_sendPlayerMetrics()
 
 '        else if event.isStreamSegmentInfo()
-'            m.debugLog("ll_process_player_metrics(Type: isStreamSegmentInfo, Index: " + event.GetIndex().ToStr() + ", SegUrl: " + event.GetInfo()["SegUrl"] + ")")
+'            ll_debug_log("ll_process_player_metrics(Type: isStreamSegmentInfo, Index: " + event.GetIndex().ToStr() + ", SegUrl: " + event.GetInfo()["SegUrl"] + ")")
 '        else if event.isStatusMessage()
-'            m.debugLog("ll_process_player_metrics(Type: isStatusMessage, Message: " + event.GetMessage() + ")")
+'            ll_debug_log("ll_process_player_metrics(Type: isStatusMessage, Message: " + event.GetMessage() + ")")
 '        else
-'            m.debugLog("ll_process_player_metrics(Type: unexpected type)")
+'            ll_debug_log("ll_process_player_metrics(Type: unexpected type)")
         end if
-        m.debugLog("ll_process_player_metrics(" + message + ")")
+        ll_debug_log("ll_process_player_metrics(" + message + ")")
     end if
 End Function
 
 Function ll_send_player_metrics()
-    m.debugLog("ll_send_player_metrics()")
+    ll_debug_log("ll_send_player_metrics()")
 
-    playback_section = m.constants.section_playback
+    playback_section = m.localytics.constants.section_playback
 
-    if ll_read_registry(m.keys.auto_playback_pending, "false", playback_section) = "true" then
+    if ll_read_registry(m.localytics.keys.auto_playback_pending, "false", playback_section) = "true" then
         attributes = CreateObject("roAssociativeArray")
 
         ' Required metadata fields
-        attributes[m.constants.content_id] = m.constants.not_available
-        attributes[m.constants.content_title] = m.constants.not_available
-        attributes[m.constants.content_series_title] = m.constants.not_available
-        attributes[m.constants.content_category] = m.constants.not_available
+        attributes[m.localytics.constants.content_id] = m.localytics.constants.not_available
+        attributes[m.localytics.constants.content_title] = m.localytics.constants.not_available
+        attributes[m.localytics.constants.content_series_title] = m.localytics.constants.not_available
+        attributes[m.localytics.constants.content_category] = m.localytics.constants.not_available
 
         ' Process metadata
-        metadata_section= CreateObject("roRegistrySection", m.constants.section_metadata)
+        metadata_section= CreateObject("roRegistrySection", m.localytics.constants.section_metadata)
         for each key in metadata_section.GetKeyList()
             attributes[key] = metadata_section.Read(key)
         end for
 
         ' Fill Playback Data
-        contentUrl = ll_read_registry(m.keys.auto_playback_url, m.constants.not_available, playback_section)
-        attributes[m.constants.content_url] = contentUrl
+        contentUrl = ll_read_registry(m.localytics.keys.auto_playback_url, m.localytics.constants.not_available, playback_section)
+        attributes[m.localytics.constants.content_url] = contentUrl
 
-        endReason = ll_read_registry(m.keys.auto_playback_end_reason, m.constants.finish_reason_unknown, playback_section)
-        attributes[m.constants.content_did_reach_end] = ll_to_string(endReason = m.constants.finish_reason_playback_ended)
-        attributes[m.constants.end_reason] = endReason
+        endReason = ll_read_registry(m.localytics.keys.auto_playback_end_reason, m.localytics.constants.finish_reason_unknown, playback_section)
+        attributes[m.localytics.constants.content_did_reach_end] = ll_to_string(endReason = m.localytics.constants.finish_reason_playback_ended)
+        attributes[m.localytics.constants.end_reason] = endReason
 
-        bufferTime = ll_read_registry(m.keys.auto_playback_buffer, m.constants.not_available, playback_section)
-        attributes[m.constants.content_time_to_buffer_seconds] = bufferTime
+        bufferTime = ll_read_registry(m.localytics.keys.auto_playback_buffer, m.localytics.constants.not_available, playback_section)
+        attributes[m.localytics.constants.content_time_to_buffer_seconds] = bufferTime
 
-        playbackTime = ll_read_registry(m.keys.auto_playback_current_time, m.constants.not_available, playback_section)
-        attributes[m.constants.content_timestamp] = playbackTime
+        playbackTime = ll_read_registry(m.localytics.keys.auto_playback_current_time, m.localytics.constants.not_available, playback_section)
+        attributes[m.localytics.constants.content_timestamp] = playbackTime
 
-        contentLength = ll_read_registry(m.keys.auto_playback_length, m.constants.not_available, playback_section)
-        attributes[m.constants.content_length] = contentLength
+        contentLength = ll_read_registry(m.localytics.keys.auto_playback_length, m.localytics.constants.not_available, playback_section)
+        attributes[m.localytics.constants.content_length] = contentLength
 
-        timeWatched = ll_read_registry(m.keys.auto_playback_watched, m.constants.not_available, playback_section)
-        attributes[m.constants.content_played_seconds] = timeWatched
+        timeWatched = ll_read_registry(m.localytics.keys.auto_playback_watched, m.localytics.constants.not_available, playback_section)
+        attributes[m.localytics.constants.content_played_seconds] = timeWatched
 
-        percentComplete = m.constants.not_available
+        percentComplete = m.localytics.constants.not_available
         if contentLength.ToInt() > 0 then
-            if endReason = m.constants.finish_reason_playback_ended then
+            if endReason = m.localytics.constants.finish_reason_playback_ended then
                 percentComplete = 100
             else
                 percentComplete = Int((timeWatched.ToInt()/contentLength.ToInt())*100)
             end if
         end if
-        attributes[m.constants.content_played_percent] = percentComplete
+        attributes[m.localytics.constants.content_played_percent] = percentComplete
 
         for each key in attributes ' clean up as string fields
             attributes[key] = ll_json_escape_string(attributes[key])
         end for
 
-        m.TagEvent(m.constants.event_video_watched, attributes, timeWatched.ToInt())
+        ll_tag_event(m.localytics.constants.event_video_watched, attributes, timeWatched.ToInt())
 
         ' Cleanup
-        ll_clear_registry(true,m.constants.section_metadata)
-        ll_clear_registry(true,m.constants.section_playback)
+        ll_clear_registry(true,m.localytics.constants.section_metadata)
+        ll_clear_registry(true,m.localytics.constants.section_playback)
     end if
 End Function
 
 
 Function ll_keep_session_alive(source="external" As String)
-    m.debugLog("ll_keep_session_alive(Source: " + source + ")")
+    ll_debug_log("ll_keep_session_alive(Source: " + source + ")")
 
     timestamp = ll_get_timestamp_generator()
-    m.setSessionValue(m.keys.session_action_time, timestamp.asSeconds())
-    m.processOutStandingRequest()
+    ll_set_session_value(m.localytics.keys.session_action_time, timestamp.asSeconds())
+    ll_process_outstanding_request()
 End Function
 
 Function ll_check_session_timeout(isInit=false as Boolean)
     currentTime = ll_get_timestamp_generator().asSeconds()
-    lastActionTime = m.getSessionValue(m.keys.session_action_time)
+    lastActionTime = ll_get_session_value(m.localytics.keys.session_action_time)
     diff = currentTime-lastActionTime
 
-    m.debugLog("ll_check_session_timeout("+ m.sessionTimeout.toStr() +"): Inactive for " + diff.toStr())
+    ll_debug_log("ll_check_session_timeout("+ m.localytics.sessionTimeout.toStr() +"): Inactive for " + diff.toStr())
 
     if isInit then
-        if m.sessionTimeout = 0 or diff > m.sessionTimeout then
-            m.closeSession(isInit)
-            m.openSession()
+        if m.localytics.sessionTimeout = 0 or diff > m.localytics.sessionTimeout then
+            ll_close_session(isInit)
+            ll_open_session()
         else
-            m.screenViewed("[External]", lastActionTime)
+            ll_screen_viewed("[External]", lastActionTime)
         end if
-    else if (m.sessionTimeout > 0 and diff > m.sessionTimeout)then
-       m.closeSession(isInit)
-       m.openSession()
+    else if (m.localytics.sessionTimeout > 0 and diff > m.localytics.sessionTimeout)then
+       ll_close_session(isInit)
+       ll_open_session()
     end if
 End Function
 
 Function ll_process_outstanding_request()
-    m.debugLog("ll_process_outstanding_request()")
+    ll_debug_log("ll_process_outstanding_request()")
 
-    for each key in m.outstandingRequests
-        http = m.outstandingRequests[key]
+    for each key in m.localytics.outstandingRequests
+        http = m.localytics.outstandingRequests[key]
         if type(http) = "roUrlTransfer" then
             port = http.GetPort()
             if type(port) = "roMessagePort" then
                 event = port.GetMessage()
                 if type(event) = "roUrlEvent"
-                    m.outstandingRequests.Delete(key)
-                    m.debugLog("process_done: " + event.GetString())
+                    m.localytics.outstandingRequests.Delete(key)
+                    ll_debug_log("process_done: " + event.GetString())
                 else
-                    m.debugLog("process_not_done: " + key)
+                    ll_debug_log("process_not_done: " + key)
                 end if
             end if
         end if
@@ -572,42 +521,42 @@ End Function
 
 Function ll_persist_session()
     ' any extra persistence to registry setSessionValue automatically call write registry
-    m.debugLog("ll_persist_session()")
+    ll_debug_log("ll_persist_session()")
 End Function
 
 Function ll_restore_session() As Boolean
-    m.debugLog("ll_restore_session()")
+    ll_debug_log("ll_restore_session()")
     oldSession = CreateObject("roAssociativeArray")
-    oldSession[m.keys.session_uuid] = ll_read_registry(m.keys.session_uuid)
+    oldSession[m.localytics.keys.session_uuid] = ll_read_registry(m.localytics.keys.session_uuid)
 
-    if oldSession[m.keys.session_uuid] = "" then
+    if oldSession[m.localytics.keys.session_uuid] = "" then
         return false
     end if
 
-    oldSession[m.keys.install_uuid] = ll_read_registry(m.keys.install_uuid, ll_generate_guid())
-    oldSession[m.keys.session_index] = ll_read_registry(m.keys.session_index).ToInt()
-    oldSession[m.keys.sequence_index] = ll_read_registry(m.keys.sequence_index).ToInt()
-    oldSession[m.keys.session_open_time] = ll_read_registry(m.keys.session_open_time).ToInt()
-    oldSession[m.keys.session_action_time] = ll_read_registry(m.keys.session_action_time).ToInt()
-    oldSession[m.keys.screen_flows] = ll_read_registry(m.keys.screen_flows)
-    oldSession[m.keys.profile_customer_id] = ll_read_registry(m.keys.profile_customer_id)
+    oldSession[m.localytics.keys.install_uuid] = ll_read_registry(m.localytics.keys.install_uuid, ll_generate_guid())
+    oldSession[m.localytics.keys.session_index] = ll_read_registry(m.localytics.keys.session_index).ToInt()
+    oldSession[m.localytics.keys.sequence_index] = ll_read_registry(m.localytics.keys.sequence_index).ToInt()
+    oldSession[m.localytics.keys.session_open_time] = ll_read_registry(m.localytics.keys.session_open_time).ToInt()
+    oldSession[m.localytics.keys.session_action_time] = ll_read_registry(m.localytics.keys.session_action_time).ToInt()
+    oldSession[m.localytics.keys.screen_flows] = ll_read_registry(m.localytics.keys.screen_flows)
+    oldSession[m.localytics.keys.profile_customer_id] = ll_read_registry(m.localytics.keys.profile_customer_id)
 
     ' auto-tag metrics
-    oldSession[m.keys.auto_previous_screen] = ll_read_registry(m.keys.auto_previous_screen)
-    oldSession[m.keys.auto_previous_screen_time] = ll_read_registry(m.keys.auto_previous_screen_time).ToInt()
+    oldSession[m.localytics.keys.auto_previous_screen] = ll_read_registry(m.localytics.keys.auto_previous_screen)
+    oldSession[m.localytics.keys.auto_previous_screen_time] = ll_read_registry(m.localytics.keys.auto_previous_screen_time).ToInt()
 
     for i=0 to 9
         cdKey = "c" + i.ToStr()
         oldSession[cdKey] = ll_read_registry(cdKey)
     next
 
-    m.session = oldSession
+    m.localytics.session = oldSession
 
     return true
 End Function
 
 Function ll_load_custom_dimensions() As Object
-    m.debugLog("ll_load_custom_dimensions()")
+    ll_debug_log("ll_load_custom_dimensions()")
     oldCustomDimensions = CreateObject("roAssociativeArray")
 
     for i=0 to 9
@@ -626,8 +575,8 @@ Function ll_get_header(seq As Integer) As Object
     header.u = ll_generate_guid()
     header.attrs = CreateObject("roAssociativeArray")
     header.attrs.dt = "a"
-    header.attrs.au = m.appKey
-    header.attrs.iu = m.getSessionValue(m.keys.install_uuid)
+    header.attrs.au = m.localytics.appKey
+    header.attrs.iu = ll_get_session_value(m.localytics.keys.install_uuid)
 
     di = CreateObject("roDeviceInfo")
     ai = CreateObject("roAppInfo")
@@ -637,7 +586,7 @@ Function ll_get_header(seq As Integer) As Object
     header.attrs.dov = di.GetVersion() 'device version
     header.attrs.dmo = di.GetModel() 'device model
 
-    header.attrs.lv = m.libraryVersion
+    header.attrs.lv = m.localytics.libraryVersion
     header.attrs.dma = "Roku"
     header.attrs.dll = di.GetCurrentLocale().Left(2)
     header.attrs.dlc = di.GetCountryCode()
@@ -649,9 +598,10 @@ End Function
 
 ' Wrapper function - adds the required header data to each call
 Function ll_send(event As Object)
+    ll_debug_log("ll_send()")
     for i=0 to 9
         cdKey = "c" + i.ToStr()
-        value = m.customDimensions[cdKey]
+        value = m.localytics.customDimensions[cdKey]
         if value <> invalid and value <> "" then
             event[cdKey] = value
         end if
@@ -659,12 +609,12 @@ Function ll_send(event As Object)
 
     timestamp = ll_get_timestamp_generator()
 
-    seq = m.getSessionValue(m.keys.sequence_index)
-    header = m.getHeader(seq)
-    m.setSessionValue(m.keys.sequence_index, seq+1)
+    seq = ll_get_session_value(m.localytics.keys.sequence_index)
+    header = ll_get_header(seq)
+    ll_set_session_value(m.localytics.keys.sequence_index, seq+1)
 
-    baseUrl = m.endpoint
-    appKey = m.appKey
+    baseUrl = m.localytics.endpoint
+    appKey = m.localytics.appKey
     path = "/uploads/image.gif?client_date=" + timestamp.asSeconds().ToStr()
     callback = "&callback=z"
     data = "&data="
@@ -674,14 +624,14 @@ Function ll_send(event As Object)
     params = urlTransfer.Escape(ll_set_params_as_string(header)) + "%0A" + urlTransfer.Escape(ll_set_params_as_string(event))
 
     request = baseUrl + appKey + path + callback + data + params
-    m.debugLog("ll_send(): " + urlTransfer.Unescape(request))
-    m.upload(request)
+    ll_debug_log("ll_send(): " + urlTransfer.Unescape(request))
+    ll_upload(request)
 End Function
 
 Function ll_upload(url As String)
     http = CreateObject("roUrlTransfer")
 
-    if m.secured then
+    if m.localytics.secured then
         http.SetCertificatesFile("common:/certs/ca-bundle.crt")
         http.InitClientCertificates()
     end if
@@ -692,7 +642,7 @@ Function ll_upload(url As String)
     http.EnableEncodings(true)
 
     if (http.AsyncGetToString())
-        m.outstandingRequests[url] = http
+        m.localytics.outstandingRequests[url] = http
     endif
 End Function
 
@@ -701,54 +651,54 @@ End Function
 ' Customer Profile Functions
 '************************************************************
 Function ll_set_customer_id(customerId="" As String)
-    m.debugLog("ll_set_customer_id()")
+    ll_debug_log("ll_set_customer_id()")
 
-    m.setSessionValue(m.keys.profile_customer_id, customerId)
+    ll_set_session_value(m.localytics.keys.profile_customer_id, customerId)
 End Function
 
 Function ll_set_customer_email(customerEmail As String)
-    m.debugLog("ll_set_customer_email()")
+    ll_debug_log("ll_set_customer_email()")
 
-    m.SetProfileAttribute("org", m.keys.profile_customer_email, customerEmail)
+    ll_set_profile_attribute("org", m.localytics.keys.profile_customer_email, customerEmail)
 End Function
 
 Function ll_set_customer_full_name(fullName As String)
-    m.debugLog("ll_set_customer_full_name()")
+    ll_debug_log("ll_set_customer_full_name()")
 
-    m.SetProfileAttribute("org", m.keys.profile_customer_full_name, fullName)
+    ll_set_profile_attribute("org", m.localytics.keys.profile_customer_full_name, fullName)
 End Function
 
 Function ll_set_customer_first_name(firstName As String)
-    m.debugLog("ll_set_customer_first_name()")
+    ll_debug_log("ll_set_customer_first_name()")
 
-    m.SetProfileAttribute("org", m.keys.profile_customer_first_name, firstName)
+    ll_set_profile_attribute("org", m.localytics.keys.profile_customer_first_name, firstName)
 End Function
 
 Function ll_set_customer_last_name(lastName As String)
-    m.debugLog("ll_set_customer_last_name()")
+    ll_debug_log("ll_set_customer_last_name()")
 
-    m.SetProfileAttribute("org", m.keys.profile_customer_last_name, lastName)
+    ll_set_profile_attribute("org", m.localytics.keys.profile_customer_last_name, lastName)
 End Function
 
 Function ll_set_profile_attribute(scope as String, key As String, value=invalid As Dynamic)
     if key.Len() > 0 then
         attribute = CreateObject("roAssociativeArray")
         attribute[key] = value
-        m.patchProfile(scope, attribute)
+        ll_patch_profile(scope, attribute)
     end if
 End Function
 
 Function ll_patch_profile(scope as String, attributes=invalid As Object)
-    customerId = m.getSessionValue(m.keys.profile_customer_id)
-    installId = ll_read_registry(m.keys.install_uuid, ll_generate_guid())
+    customerId = ll_get_session_value(m.localytics.keys.profile_customer_id)
+    installId = ll_read_registry(m.localytics.keys.install_uuid, ll_generate_guid())
 
     if attributes = invalid or attributes.IsEmpty() or (not ll_is_valid_string(customerId)) then return -1
 
-    endpoint = m.profileEndpoint + m.appKey + "/profiles/" + customerId
+    endpoint = m.localytics.profileEndpoint + m.localytics.appKey + "/profiles/" + customerId
 
     http = CreateObject("roUrlTransfer")
 
-    if m.secured then
+    if m.localytics.secured then
         http.SetCertificatesFile("common:/certs/ca-bundle.crt")
         http.InitClientCertificates()
     end if
@@ -769,10 +719,10 @@ Function ll_patch_profile(scope as String, attributes=invalid As Object)
     ' Must nest it in attributes json
     body = ll_set_params_as_string(bodyData)
 
-    m.debugLog("ll_patch_profile(url:" +endpoint+ ", body: " +body+ ")")
+    ll_debug_log("ll_patch_profile(url:" +endpoint+ ", body: " +body+ ")")
 
     if (http.AsyncPostFromString(body))
-        m.outstandingRequests[endpoint+body] = http
+        m.localytics.outstandingRequests[endpoint+body] = http
     endif
 End Function
 
@@ -856,7 +806,7 @@ Function ll_get_constants() As Object
 End Function
 
 Function ll_is_persisted_across_session(storageKey) As Boolean
-    return storageKey = m.keys.install_uuid or storageKey = m.keys.session_index or ll_is_custom_dimensions_key(storageKey)
+    return storageKey = m.localytics.keys.install_uuid or storageKey = m.localytics.keys.session_index or ll_is_custom_dimensions_key(storageKey)
 End Function
 
 Function ll_is_custom_dimensions_key(storageKey) As Boolean
@@ -912,19 +862,19 @@ End Function
 
 ' True if the instance has been initialized
 Function ll_has_session() As Boolean
-    return m.session <> invalid
+    return m.localytics.session <> invalid
 End Function
 
 ' Manages the current instance's variables, ie. appKey, sessionStartTime, clientId ...
 Function ll_get_session_value(param As String) As Dynamic
-    if m.HasSession() AND param <> invalid then
+    if ll_has_session() AND param <> invalid then
         return m["session"][param]
     end if
 
     return ""
 End Function
 Function ll_set_session_value(param As String, value As Dynamic, flush=false As Boolean, persist=true As Boolean)
-    if m.HasSession() AND param <> invalid AND value <> invalid then
+    if ll_has_session() AND param <> invalid AND value <> invalid then
         m["session"][param] = value
 
         if persist then
@@ -1024,7 +974,7 @@ Function ll_is_valid_string(variable As Dynamic) As Boolean
 End Function
 
 Function ll_debug_log(line as String)
-    if m.debug = true
+    if m.localytics.debug = true
         print "<ll_debug> " + line
     end if
 End Function

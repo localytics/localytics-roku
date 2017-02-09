@@ -7,14 +7,12 @@
     port = CreateObject("roMessagePort")
     screen.SetMessagePort(port)
 
-    'initialize Localytics
+    ' initialize Localytics to set customer id and initialize session
     appKey = "248e08688d5f4e2e19b6ead-14de4cd2-e974-11e6-8a2a-0021f941005d"
-    m.Localytics = Localytics(appKey)
-    m.Localytics.AutoIntegrate()
+    initLocalytics(appKey)
     customerID = "customer1"
-    m.Localytics.SetCustomerId(customerID)
-    print "Localytics Initialized"
-    m.Localytics.TagEvent("Localytics Initialized")
+    ll_set_customer_id(customerID)
+    ' ll_initialize_session()
 
     screen.Show()
 

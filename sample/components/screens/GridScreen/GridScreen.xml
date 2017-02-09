@@ -26,6 +26,8 @@
     <!-- main handler -->
     <script type="text/brightscript" uri="pkg:/components/screens/GridScreen/GridScreen.brs" />
     <children>
+        <LocalyticsTask id="LocalyticsTask" />
+        
         <FadingBackground
             id="Background"
             width="1280"
