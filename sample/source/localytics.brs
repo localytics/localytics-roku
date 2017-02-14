@@ -134,7 +134,7 @@ Function ll_close_session(isInit=false as Boolean)
         ll_screen_viewed("[Inactivity]", lastActionTime)
     end if
 
-    ll_sendPlayerMetrics()'Attempt to fire player metrics
+    ll_send_player_metrics()'Attempt to fire player metrics
 
     event = CreateObject("roAssociativeArray")
     event.dt = "c"
