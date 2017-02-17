@@ -6,12 +6,9 @@ Function Init()
     ' listen on port 8089
     ? "[HomeScene] Init"
 
-    m.LocalyticsTask = m.top.findNode("LocalyticsTask")
-    m.LocalyticsTask.control = "RUN"
-    m.LocalyticsTask.event = {name: "HomeScene Init"}
-
     'main grid screen node
     m.GridScreen = m.top.findNode("GridScreen")
+
     'video player node
     m.videoPlayer = m.top.findNode("videoPlayer")
 
@@ -21,8 +18,20 @@ Function Init()
     ' loading indicator starts at initializatio of channel
     m.loadingIndicator = m.top.findNode("loadingIndicator")
 
+    m.LocalyticsTask = m.top.findNode("LocalyticsTask")
+    m.localyticsTask.observeField("started", "OnLocalyticsTaskStarted")
+    m.LocalyticsTask.control = "RUN"
 
 End Function
+
+'Helper functions to initialize the task
+
+Sub OnLocalyticsTaskStarted()
+  'Send task to all children
+  m.GridScreen.localyticsTask = m.LocalyticsTask
+  'Fire any events for the start of the scene
+  m.LocalyticsTask.event = {name: "HomeScene Init"}
+End Sub
 
 ' Row item selected handler
 Sub OnRowItemSelected()

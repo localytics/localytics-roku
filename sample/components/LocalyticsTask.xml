@@ -18,6 +18,9 @@
 
 <script type="text/brightscript" uri="pkg:/source/localytics.brs"/>
   <interface>
+    <!-- read only field to inidicate when the task has started and is ready to listen to events -->
+    <field id="started" type="bool"/>
+
     <!--
       -
       -  event should contain:

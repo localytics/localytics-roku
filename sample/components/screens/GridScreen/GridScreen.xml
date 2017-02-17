@@ -21,13 +21,14 @@
 
         <!-- Interface to focused item (Content Node) -->
         <field id="focusedContent"  type="node"/>
+
+        <!-- The localytics task waiting for events -->
+        <field id="localyticsTask" type="node"/>
     </interface>
 
     <!-- main handler -->
     <script type="text/brightscript" uri="pkg:/components/screens/GridScreen/GridScreen.brs" />
     <children>
-        <LocalyticsTask id="LocalyticsTask" />
-        
         <FadingBackground
             id="Background"
             width="1280"

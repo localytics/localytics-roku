@@ -4,14 +4,11 @@
  ' sets all observers
 Function Init()
     ? "[GridScreen] Init"
-
-    m.LocalyticsTask = m.top.findNode("LocalyticsTask")
-    m.LocalyticsTask.control = "RUN"
-    m.LocalyticsTask.event = {name: "GridScene Init"}
-
     m.top.observeField("focusedChild", "OnChildFocused")
     m.rowList = m.top.findNode("RowList")
 
+    'Add this to listen for when the task is ready
+    m.top.observeField("localyticsTask", "ll_init_component")
     m.Description = m.top.findNode("Description")
     m.Background = m.top.findNode("Background")
 End Function
@@ -23,10 +20,30 @@ Sub OnChildFocused()
     end if
 End Sub
 
+'  Add These two helper functions
+Sub ll_init_component()
+  if (m.LocalyticsTask = Invalid) then
+    if (m.top.localyticsTask <> Invalid) then
+      m.LocalyticsTask = m.top.localyticsTask
+      ' Fire any events related to this screen starting
+      m.LocalyticsTask.event = {name: "GridScene Init"}
+    end if
+  end if
+End Sub
+
+Function safeFireLocalyticsEvent(event as Object) as Void
+  if (m.LocalyticsTask <> Invalid) then
+    m.LocalyticsTask.event = event
+  end if
+End Function
+
+
 ' handler of focused item in RowList
 Sub OnItemFocused()
     itemFocused = m.top.itemFocused
     ? ">> GridScreen > OnItemFocused"; itemFocused
+
+    safeFireLocalyticsEvent({name: "GridScene Item Focused", attributes: { a: 1, b: 2}})
 
     'When an item gains the key focus, set to a 2-element array,
     'where element 0 contains the index of the focused row,

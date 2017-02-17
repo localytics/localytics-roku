@@ -1,6 +1,11 @@
+
 Function init()
     m.top.functionName = "execLocalyticsLoop"
 end Function
+
+' TODO: check on the outstandingRequests from initLocalytics
+' test that session length looks proper
+' test screens
 
 'Runs as a part of LocalyticsTask'
 Function execLocalyticsLoop()
@@ -8,23 +13,28 @@ Function execLocalyticsLoop()
     m.top.observeField("event", port)
     m.top.observeField("screen", port)
 
-    ' Paste your app key here'
-    appKey = "248e08688d5f4e2e19b6ead-14de4cd2-e974-11e6-8a2a-0021f941005d"
-    initLocalytics(appKey)
+    ll_restore_context()
 
+    ll_debug_log("execLocalyticsLoop")
+    m.top.started = true
     while true
-        msg = wait(0, port)
-        if type(msg) = "roSGNodeEvent" then
-            field = msg.getField()
-            data = msg.getData()
-            if field = "event" then
-                if data.name = invalid then data.name = ""
-                ll_tag_event(data.name)
-            else if field = "screen" then
-                if data.name = invalid then data.name = ""
-                ll_tag_screen(data.name)
-            end if
-        end if
+
+        msg = wait(10000, port)
+        if msg = invalid then
+          ll_keep_session_alive("Wait Timeout")
+        else
+          if type(msg) = "roSGNodeEvent" then
+              field = msg.getField()
+              data = msg.getData()
+              if field = "event" then
+                  if data.name = invalid then data.name = ""
+                  ll_tag_event(data.name, data.attributes)
+              else if field = "screen" then
+                  if data.name = invalid then data.name = ""
+                  ll_tag_screen(data.name)
+              end if
+          end if
+      end if
     end while
 
 End Function
@@ -39,6 +49,8 @@ Function initLocalytics(appKey As String, sessionTimeout=1800 As Integer, secure
 
     new_localytics.debug = debug 'Extra loggin on/off
     new_localytics.libraryVersion = "roku_3.0.0"
+
+    ll_debug_log("init Localytics: "+appKey)
 
     if secured then
         new_localytics.uriScheme = "https"
@@ -58,8 +70,29 @@ Function initLocalytics(appKey As String, sessionTimeout=1800 As Integer, secure
     new_localytics.constants = ll_get_constants()
 
     if fresh then
-        new_localytics.deleteSessionData(true)
+        ll_delete_session_data(true)
     end if
+
+    'persist the interesting bits
+    ll_write_registry("appKey", appKey, false)
+    ll_write_registry_dyn("sessionTimeout", sessionTimeout, false)
+    ll_write_registry_dyn("secured", debug, false)
+    ll_write_registry_dyn("debug", debug, true)
+End Function
+
+'restore the local m.localytics array, then restore any session data
+Function ll_restore_context()
+  if m.localytics = Invalid then
+    appKey = ll_read_registry("appKey")
+    sessionTimeout = ll_read_registry_int("sessionTimeout", "1800")
+    secured = ll_read_registry_bool("secured", "True")
+    debug = ll_read_registry_bool("debug", "False")
+    initLocalytics(appKey, sessionTimeout, secured, debug)
+    ll_debug_log("ll_restore_context")
+    ll_initialize_session()
+  else
+    ll_debug_log("ll_restore_context: already restored")
+  end if
 End Function
 
 'Initializes the session
@@ -281,7 +314,7 @@ End Function
 
 ' Sets Content Metadata for auto-tagging. If "value" is empty, the key is deleted.
 Function ll_set_content_metadata(key as String, value as Dynamic, required=false as Boolean, flush=true as Boolean)
-    ll_debug_log("ll_set_content_metadata("+ key + ", " + ll_to_string(value) + ")")
+    ll_debug_log("ll_set_content_metadata("+ key + ", " + _str_string(value) + ")")
 
     if ll_is_string(key)
         strValue = ll_to_string(value)
@@ -829,6 +862,22 @@ Function ll_read_registry(key As String, default="" As String, section="com.loca
     return default
 End Function
 
+Function ll_read_registry_bool(key As String, default="" As String, section="com.localytics" As String) As Boolean
+    if ll_read_registry(key, default, section) = "True" then
+        return true
+    end if
+    return false
+End Function
+
+Function ll_read_registry_int(key As String, default="" As String, section="com.localytics" As String) As Integer
+    return ll_read_registry(key, default, section).toInt()
+End Function
+
+' Same as ll_write_registry, but takes any type
+Function ll_write_registry_dyn(key As String, value As Dynamic, flush=true As Boolean, section="com.localytics" As String)
+  ll_write_registry(key, ll_to_string(value), flush, section)
+End Function
+
 ' Writes "value" to "key" of registry "section". "flush" = false will skip calling Flush(), ideal for multiple writes
 Function ll_write_registry(key As String, value As String, flush=true As Boolean, section="com.localytics" As String)
     sec = CreateObject("roRegistrySection", section)
@@ -869,23 +918,18 @@ End Function
 ' Manages the current instance's variables, ie. appKey, sessionStartTime, clientId ...
 Function ll_get_session_value(param As String, decimal=false as Boolean, bool=false as Boolean) As Dynamic
     if ll_has_session() AND param <> invalid then
-        if decimal then
-            return ll_read_registry(param).toInt()
-        else if bool then
-            booleanValue = ll_read_registry(param)
-
-            if booleanValue = "True" then
-                return true
-            end if
-
-            return false
-        end if
-
+      if decimal then
+        return ll_read_registry_int(param)
+      else if bool then
+        return ll_read_registry_bool(param)
+      else
         return ll_read_registry(param)
+      end if
     end if
 
     return ""
 End Function
+
 Function ll_set_session_value(param As String, value As Dynamic, flush=false As Boolean, persist=true As Boolean)
     if ll_has_session() AND param <> invalid AND value <> invalid then
         ll_write_registry(param, ll_to_string(value), flush)
@@ -984,9 +1028,14 @@ Function ll_is_valid_string(variable As Dynamic) As Boolean
     return (ll_is_string(variable) and variable.Len() > 0)
 End Function
 
-Function ll_debug_log(line as String)
+Function ll_debug_log(line as Dynamic)
     if m.localytics.debug = true
-        print "<ll_debug> " + line
+        if ll_is_string(line) then
+          print "<ll_debug> " + line
+        else
+          print "<ll_debug>" + ll_to_string(line)
+        end if
+        return ""
     end if
 End Function
 
