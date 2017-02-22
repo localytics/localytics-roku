@@ -2,8 +2,6 @@
 
 The Localytics library is contained in `sample/source/localytics.brs`.
 
-NOTE: All functions are currently available only from `main.brs` except the `ll_tag_event` and `ll_tag_screen` as shown in the sample app.
-
 Localytics currently runs off of a long running task. This task can be added to the `HomeScene` as a child object:
 ```
 <LocalyticsTask id="LocalyticsTask" />
@@ -54,7 +52,7 @@ Then, we can tag our event:
 safeFireLocalyticsEvent({name: "GridScene Item Focused", attributes: { a: 1, b: 2}})
 ```
 
-## Initialization
+### Initialization (only available from main.brs)
 *initLocalytics(appKey As String, sessionTimeout=1800 As Integer, secured=true As Boolean) as Object*
 * appKey: your App Key
 * sessionTimeout (optional): Timeout period, # of seconds of inactivity before considering a new session.
@@ -66,24 +64,39 @@ safeFireLocalyticsEvent({name: "GridScene Item Focused", attributes: { a: 1, b: 
 *ll_set_customer_first_name(value As String)*
 *ll_set_customer_last_name(value As String)*
 *ll_set_customer_full_name(value As String)*
+```
+task.customer = {id: myId, email: myEmail, firstName: myFirstName, lastName: myLastName, fullName: myFullName}
+```
 
 If available, CustomerId should be set. Email and name fields are also available to further identify the user Profile.
 You can set other custom attribute with the following:
 
 *ll_set_profile_attribute(scope as String, key As String, value=invalid As Dynamic)*
+```
+task.profileAttribute = {scope: myScope, key: myKey, value: myValue}
+```
 * scope("org" or "app"): set whether to set "org" or "app" level profile
 * key: Profile attribute name
 * value: Profile attribute value
 
 ###Custom Dimensions
 *ll_set_custom_dimension(i as Integer, value as String)*
+```
+task.customDimension = {i: myIndex, value: myValue}
+```
 * Set Custom Dimension with their index and value.
 
 ###Tag Events
 *ll_tag_event(name as String, attributes=invalid as Object, customerValueIncrease=0 as Integer)*
+```
+task.event = {name: myName, attributes:{attr1: val1, attr2: val2}}
+```
 
 ###Tag Screens
 *ll_tag_screen(name as String)*
+```
+task.screen = {name: myScreen}
+```
 
 ### Set Content Details
 ######Provide details about the content that will be played.
@@ -92,6 +105,9 @@ You can set other custom attribute with the following:
 *ll_set_content_title(value="N/A" as Dynamic)*
 *ll_set_content_series_title(value="N/A" as Dynamic)*
 *ll_set_content_category(value="N/A" as Dynamic)*
+```
+task.content = {id: myId, length: myLength, title: myTitle, seriesTitle: seriesTitle, category: category}
+```
 
 These parameters should be set before the playback ends, at which point they will be processed.
 
@@ -102,6 +118,9 @@ All are optional parameters, but setting these with Integer or String value is h
 #####Now pass the player events to the Localytics SDK to aggegrate playback metrics inside the player event loop.
 
 *ll_process_player_metrics(event as Object)*
+```
+task.playerObject = {event: myEvent}
+```
 
 ### Other notes
 * This sdk utilizes Registry Section under "com.localytics.\*"

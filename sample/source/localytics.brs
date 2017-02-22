@@ -13,8 +13,8 @@ Function execLocalyticsLoop()
     m.top.observeField("event", port)
     m.top.observeField("screen", port)
     m.top.observeField("customer", port)
-    m.top.observeField("profile", port)
-    m.top.observeField("dimension", port)
+    m.top.observeField("profileAttribute", port)
+    m.top.observeField("customDimension", port)
     m.top.observeField("content", port)
     m.top.observeField("playerObject", port)
 
@@ -40,10 +40,10 @@ Function execLocalyticsLoop()
                     if data.firstName <> invalid then ll_set_customer_first_name(data.firstName)
                     if data.lastName <> invalid then ll_set_customer_last_name(data.lastName)
                     if data.fullName <> invalid then ll_set_customer_full_name(data.fullName)
-                else if field = "profile" then
+                else if field = "profileAttribute" then
                     if data.scope <> invalid and data.key <> invalid then
                         ll_set_profile_attribute(data.scope, data.key, data.attributes)
-                else if field = "dimension" then
+                else if field = "customDimension" then
                     if data.i <> invalid and data.value <> invalid then
                         ll_set_custom_dimension(data.i, data.value)
                 else if field = "content" then
