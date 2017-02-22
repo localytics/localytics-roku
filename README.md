@@ -87,11 +87,11 @@ You can set other custom attribute with the following:
 
 ### Set Content Details
 ######Provide details about the content that will be played.
-*ll_set_content_length(value as Integer)*<br />
-*ll_set_content_id(value="N/A" as Dynamic)*<br />
-*ll_set_content_title(value="N/A" as Dynamic)*<br />
-*ll_set_content_series_title(value="N/A" as Dynamic)*<br />
-*ll_set_content_category(value="N/A" as Dynamic)*<br />
+*ll_set_content_id(value="N/A" as Dynamic)*
+*ll_set_content_length(value as Integer)*
+*ll_set_content_title(value="N/A" as Dynamic)*
+*ll_set_content_series_title(value="N/A" as Dynamic)*
+*ll_set_content_category(value="N/A" as Dynamic)*
 
 These parameters should be set before the playback ends, at which point they will be processed.
 

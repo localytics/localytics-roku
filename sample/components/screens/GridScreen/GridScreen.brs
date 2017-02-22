@@ -22,8 +22,8 @@ End Sub
 
 '  Add These two helper functions
 Sub ll_init_component()
-  if (m.LocalyticsTask = Invalid) then
-    if (m.top.localyticsTask <> Invalid) then
+  if (m.LocalyticsTask = invalid) then
+    if (m.top.localyticsTask <> invalid) then
       m.LocalyticsTask = m.top.localyticsTask
       ' Fire any events related to this screen starting
       m.LocalyticsTask.event = {name: "GridScene Init"}
@@ -32,7 +32,7 @@ Sub ll_init_component()
 End Sub
 
 Function safeFireLocalyticsEvent(event as Object) as Void
-  if (m.LocalyticsTask <> Invalid) then
+  if (m.LocalyticsTask <> invalid) then
     m.LocalyticsTask.event = event
   end if
 End Function
