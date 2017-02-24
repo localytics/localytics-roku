@@ -3,9 +3,9 @@ Function init()
     m.top.functionName = "execLocalyticsLoop"
 end Function
 
-' TODO: check on the outstandingRequests from initLocalytics
-' test that session length looks proper
+' TODO: test that session length looks proper
 ' test screens
+' push outstanding requests into the registry, and retry if bad response codes'
 
 'Runs as a part of LocalyticsTask'
 Function execLocalyticsLoop()
@@ -30,30 +30,59 @@ Function execLocalyticsLoop()
             if type(msg) = "roSGNodeEvent" then
                 field = msg.getField()
                 data = msg.getData()
+
                 if field = "event" then
-                    if data.name <> invalid then ll_tag_event(data.name, data.attributes)
+                    if data.name <> invalid then
+                        ll_tag_event(data.name, data.attributes)
+                    end if
                 else if field = "screen" then
-                    if data.name <> invalid then ll_tag_screen(data.name)
+                    if data.name <> invalid then
+                        ll_tag_screen(data.name)
+                    end if
                 else if field = "customer" then
-                    if data.id <> invalid then ll_set_customer_id(data.id)
-                    if data.email <> invalid then ll_set_customer_email(data.email)
-                    if data.firstName <> invalid then ll_set_customer_first_name(data.firstName)
-                    if data.lastName <> invalid then ll_set_customer_last_name(data.lastName)
-                    if data.fullName <> invalid then ll_set_customer_full_name(data.fullName)
+                    if data.id <> invalid then
+                        ll_set_customer_id(data.id)
+                    end if
+                    if data.email <> invalid then
+                        ll_set_customer_email(data.email)
+                    end if
+                    if data.firstName <> invalid then
+                        ll_set_customer_first_name(data.firstName)
+                    end if
+                    if data.lastName <> invalid then
+                        ll_set_customer_last_name(data.lastName)
+                    end if
+                    if data.fullName <> invalid then
+                        ll_set_customer_full_name(data.fullName)
+                    end if
                 else if field = "profileAttribute" then
                     if data.scope <> invalid and data.key <> invalid then
                         ll_set_profile_attribute(data.scope, data.key, data.attributes)
+                    end if
                 else if field = "customDimension" then
                     if data.i <> invalid and data.value <> invalid then
                         ll_set_custom_dimension(data.i, data.value)
+                    end if
                 else if field = "content" then
-                    if data.id <> invalid then ll_set_content_id(data.id)
-                    if data.length <> invalid then ll_set_content_length(data.length)
-                    if data.title <> invalid then ll_set_content_title(data.title)
-                    if data.seriesTitle <> invalid then ll_set_content_series_title(data.seriesTitle)
-                    if data.category <> invalid then ll_set_content_category(data.category)
+                    if data.id <> invalid then
+                        ll_set_content_id(data.id)
+                    end if
+                    if data.length <> invalid then
+                        ll_set_content_length(data.length)
+                    end if
+                    if data.title <> invalid then
+                        ll_set_content_title(data.title)
+                    end if
+                    if data.seriesTitle <> invalid then
+                        ll_set_content_series_title(data.seriesTitle)
+                    end if
+                    if data.category <> invalid then
+                        ll_set_content_category(data.category)
+                    end if
                 else if field = "playerObject" then
-                    if data.event <> invalid then ll_process_player_metrics(data.event)
+                    if data.event <> invalid then
+                        ll_process_player_metrics(data.event)
+                    end if
                 end if
             end if
         end if
@@ -564,6 +593,7 @@ Function ll_process_outstanding_request()
             if type(port) = "roMessagePort" then
                 event = port.GetMessage()
                 if type(event) = "roUrlEvent"
+                    ll_debug_log("roUrlEvent response code: " + ll_to_string(event.GetResponseCode()))
                     m.localytics.outstandingRequests.Delete(key)
                     ll_debug_log("process_done: " + event.GetString())
                 else

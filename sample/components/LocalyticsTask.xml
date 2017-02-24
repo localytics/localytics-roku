@@ -40,5 +40,10 @@
       -
       -->
     <field id="screen" type="assocarray"/>
+    <field id="customer" type="assocarray"/>
+    <field id="profileAttribute" type="assocarray"/>
+    <field id="customDimension" type="assocarray"/>
+    <field id="content" type="assocarray"/>
+    <field id="playerObject" type="assocarray"/>
   </interface>
 </component>
