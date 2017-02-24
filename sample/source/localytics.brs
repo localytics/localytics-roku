@@ -5,7 +5,8 @@ end Function
 
 ' TODO: test that session length looks proper
 ' test screens
-' push outstanding requests into the registry, and retry if bad response codes'
+' push outstanding requests into the registry, and retry if bad response codes
+' add a registry section for persistent data (customer, profile, etc.)
 
 'Runs as a part of LocalyticsTask'
 Function execLocalyticsLoop()
@@ -138,7 +139,7 @@ Function ll_restore_context()
     sessionTimeout = ll_read_registry_int("sessionTimeout", "1800")
     secured = ll_read_registry_bool("secured", "True")
     debug = ll_read_registry_bool("debug", "False")
-    initLocalytics(appKey, sessionTimeout, secured, debug)
+    initLocalytics(appKey, sessionTimeout, secured, false, debug)
     ll_debug_log("ll_restore_context")
     ll_initialize_session()
   else
