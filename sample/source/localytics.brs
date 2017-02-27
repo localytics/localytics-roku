@@ -95,7 +95,7 @@ End Function
 ' Note:
 ' - "fresh" will clear previous stored values
 ' - "debug" will log some messages
-Function initLocalytics(appKey As String, sessionTimeout=1800 As Integer, secured=true As Boolean, fresh=false As Boolean, debug=true As Boolean) As Void
+Function initLocalytics(appKey As String, sessionTimeout=10 As Integer, secured=true As Boolean, fresh=false As Boolean, debug=true As Boolean) As Void
     new_localytics = CreateObject("roAssociativeArray")
     m.localytics = new_localytics
 
@@ -163,15 +163,10 @@ End Function
 Function ll_open_session()
     ll_debug_log("ll_open_session()")
     m.localytics.session = CreateObject("roAssociativeArray")
-    ll_set_session_value(m.localytics.keys.install_uuid, ll_read_registry(m.localytics.keys.install_uuid, ll_generate_guid()))
+    ll_read_registry(m.localytics.keys.install_uuid, ll_generate_guid())
     ll_set_session_value(m.localytics.keys.session_uuid, ll_generate_guid(), false)
-    ll_set_session_value(m.localytics.keys.session_index, ll_read_registry(m.localytics.keys.session_index, "0").ToInt() + 1, false)
+    ll_write_registry_dyn(m.localytics.keys.session_index, ll_read_registry(m.localytics.keys.session_index, "0").ToInt() + 1)
     ll_set_session_value(m.localytics.keys.sequence_index, 0, false)
-
-    for i=0 to 9
-        cdKey = "c" + i.ToStr()
-        ll_set_session_value(cdKey, ll_read_registry(cdKey), false)
-    next
 
     ' Save session start time
     timestamp = ll_get_timestamp_generator()
@@ -179,24 +174,22 @@ Function ll_open_session()
     ll_set_session_value(m.localytics.keys.session_open_time, time, false)
     ll_set_session_value(m.localytics.keys.session_action_time, time)
 
-    ll_persist_session()
-
     'Session Open
     event = CreateObject("roAssociativeArray")
     event.dt = "s"
     event.ct = time 'Open Time
     event.u = ll_get_session_value(m.localytics.keys.session_uuid)
-    event.nth = ll_get_session_value(m.localytics.keys.session_index) 'Need to persist this value
+    event.nth = ll_read_registry(m.localytics.keys.session_index) 'Need to persist this value
     event.mc = "" '?? null is ok
     event.mm = "" '?? null is ok
     event.ms = "" '?? null is ok
 
-    customerId = ll_get_session_value(m.localytics.keys.profile_customer_id)
+    customerId = ll_read_registry(m.localytics.keys.profile_customer_id)
     if ll_is_valid_string(customerId) then
         event.cid = customerId
         event.utp = "known"
     else
-        event.cid = ll_get_session_value(m.localytics.keys.install_uuid)
+        event.cid = ll_read_registry(m.localytics.keys.install_uuid)
         event.utp = "anonymous"
     end if
 
@@ -237,12 +230,12 @@ Function ll_close_session(isInit=false as Boolean)
         event.fl = "[]"
     end if
 
-    customerId = ll_get_session_value(m.localytics.keys.profile_customer_id)
+    customerId = ll_read_registry(m.localytics.keys.profile_customer_id)
     if ll_is_valid_string(customerId) then
         event.cid = customerId
         event.utp = "known"
     else
-        event.cid = ll_get_session_value(m.localytics.keys.install_uuid)
+        event.cid = ll_read_registry(m.localytics.keys.install_uuid)
         event.utp = "anonymous"
     end if
 
@@ -251,11 +244,11 @@ Function ll_close_session(isInit=false as Boolean)
     ll_delete_session_data()
 End Function
 
-Function ll_delete_session_data(clearAllFields=false As Boolean, section="com.localytics" As String)
+Function ll_delete_session_data(clearAllFields=false As Boolean, section="com.localytics.session" As String)
     sec = CreateObject("roRegistrySection", section)
 
     for each key in sec.GetKeyList()
-        if clearAllFields or not ll_is_persisted_across_session(key) then
+        if clearAllFields then
             sec.Delete(key)
         end if
     next
@@ -283,12 +276,12 @@ Function ll_tag_event(name as String, attributes=invalid as Object, customerValu
     event.v = customerValueIncrease '??
     event.n = name 'Event name
 
-    customerId = ll_get_session_value(m.localytics.keys.profile_customer_id)
+    customerId = ll_read_registry(m.localytics.keys.profile_customer_id)
     if ll_is_valid_string(customerId) then
         event.cid = customerId
         event.utp = "known"
     else
-        event.cid = ll_get_session_value(m.localytics.keys.install_uuid)
+        event.cid = ll_read_registry(m.localytics.keys.install_uuid)
         event.utp = "anonymous"
     end if
 
@@ -605,11 +598,6 @@ Function ll_process_outstanding_request()
     next
 End Function
 
-Function ll_persist_session()
-    ' any extra persistence to registry setSessionValue automatically call write registry
-    ll_debug_log("ll_persist_session()")
-End Function
-
 Function ll_restore_session() As Boolean
     ll_debug_log("ll_restore_session()")
     oldSession = CreateObject("roAssociativeArray")
@@ -631,7 +619,7 @@ Function ll_restore_session() As Boolean
     oldSession[m.localytics.keys.auto_previous_screen] = ll_read_registry(m.localytics.keys.auto_previous_screen)
     oldSession[m.localytics.keys.auto_previous_screen_time] = ll_read_registry(m.localytics.keys.auto_previous_screen_time).ToInt()
 
-    for i=0 to 9
+    for i=0 to 19
         cdKey = "c" + i.ToStr()
         oldSession[cdKey] = ll_read_registry(cdKey)
     next
@@ -645,7 +633,7 @@ Function ll_load_custom_dimensions() As Object
     ll_debug_log("ll_load_custom_dimensions()")
     oldCustomDimensions = CreateObject("roAssociativeArray")
 
-    for i=0 to 9
+    for i=0 to 19
         cdKey = "c" + i.ToStr()
         oldCustomDimensions[cdKey] = ll_read_registry(cdKey)
     next
@@ -662,7 +650,7 @@ Function ll_get_header(seq As Integer) As Object
     header.attrs = CreateObject("roAssociativeArray")
     header.attrs.dt = "a"
     header.attrs.au = m.localytics.appKey
-    header.attrs.iu = ll_get_session_value(m.localytics.keys.install_uuid)
+    header.attrs.iu = ll_read_registry(m.localytics.keys.install_uuid)
 
     di = CreateObject("roDeviceInfo")
     ai = CreateObject("roAppInfo")
@@ -685,7 +673,7 @@ End Function
 ' Wrapper function - adds the required header data to each call
 Function ll_send(event As Object)
     ll_debug_log("ll_send()")
-    for i=0 to 9
+    for i=0 to 19
         cdKey = "c" + i.ToStr()
         value = m.localytics.customDimensions[cdKey]
         if value <> invalid and value <> "" then
@@ -739,7 +727,7 @@ End Function
 Function ll_set_customer_id(customerId="" As String)
     ll_debug_log("ll_set_customer_id()")
 
-    ll_set_session_value(m.localytics.keys.profile_customer_id, customerId)
+    ll_write_registry(m.localytics.keys.profile_customer_id, customerId)
 End Function
 
 Function ll_set_customer_email(customerEmail As String)
@@ -775,7 +763,7 @@ Function ll_set_profile_attribute(scope as String, key As String, value=invalid 
 End Function
 
 Function ll_patch_profile(scope as String, attributes=invalid As Object)
-    customerId = ll_get_session_value(m.localytics.keys.profile_customer_id)
+    customerId = ll_read_registry(m.localytics.keys.profile_customer_id)
     installId = ll_read_registry(m.localytics.keys.install_uuid, ll_generate_guid())
 
     if attributes = invalid or attributes.IsEmpty() or (not ll_is_valid_string(customerId)) then return -1
@@ -891,12 +879,8 @@ Function ll_get_constants() As Object
     return constants
 End Function
 
-Function ll_is_persisted_across_session(storageKey) As Boolean
-    return storageKey = m.localytics.keys.install_uuid or storageKey = m.localytics.keys.session_index or ll_is_custom_dimensions_key(storageKey)
-End Function
-
 Function ll_is_custom_dimensions_key(storageKey) As Boolean
-    for i=0 to 9
+    for i=0 to 19
         cdKey = "c" + i.ToStr()
         if storageKey = cdKey then
             return true
@@ -972,11 +956,11 @@ End Function
 Function ll_get_session_value(param As String, decimal=false as Boolean, bool=false as Boolean) As Dynamic
     if ll_has_session() AND param <> invalid then
       if decimal then
-        return ll_read_registry_int(param)
+        return ll_read_registry_int(param, "", "com.localytics.session")
       else if bool then
-        return ll_read_registry_bool(param)
+        return ll_read_registry_bool(param, "", "com.localytics.session")
       else
-        return ll_read_registry(param)
+        return ll_read_registry(param, "", "com.localytics.session")
       end if
     end if
 
@@ -985,7 +969,7 @@ End Function
 
 Function ll_set_session_value(param As String, value As Dynamic, flush=false As Boolean, persist=true As Boolean)
     if ll_has_session() AND param <> invalid AND value <> invalid then
-        ll_write_registry(param, ll_to_string(value), flush)
+        ll_write_registry(param, ll_to_string(value), flush, "com.localytics.session")
     end if
 End Function
 

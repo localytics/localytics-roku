@@ -1,3 +1,5 @@
 *.DS_Store
+.idea
+sample/.idea
 sample/Archive.zip
 sample/roku.zip

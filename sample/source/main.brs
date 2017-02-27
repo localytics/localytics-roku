@@ -50,7 +50,9 @@ Function ParseXMLContent(list As Object)
             item = createObject("RoSGNode","ContentNode")
             ' We don't use item.setFields(itemAA) as doesn't cast streamFormat to proper value
             for each key in itemAA
-                item[key] = itemAA[key]
+                if item.hasField(key) then
+                  item[key] = itemAA[key]
+                end if
             end for
             row.appendChild(item)
         end for
