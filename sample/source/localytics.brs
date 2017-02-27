@@ -577,27 +577,6 @@ Function ll_check_session_timeout(isInit=false as Boolean)
     end if
 End Function
 
-Function ll_process_outstanding_request()
-    ll_debug_log("ll_process_outstanding_request()")
-
-    for each key in m.localytics.outstandingRequests
-        http = m.localytics.outstandingRequests[key]
-        if type(http) = "roUrlTransfer" then
-            port = http.GetPort()
-            if type(port) = "roMessagePort" then
-                event = port.GetMessage()
-                if type(event) = "roUrlEvent"
-                    ll_debug_log("roUrlEvent response code: " + ll_to_string(event.GetResponseCode()))
-                    m.localytics.outstandingRequests.Delete(key)
-                    ll_debug_log("process_done: " + event.GetString())
-                else
-                    ll_debug_log("process_not_done: " + key)
-                end if
-            end if
-        end if
-    next
-End Function
-
 Function ll_restore_session() As Boolean
     ll_debug_log("ll_restore_session()")
     oldSession = CreateObject("roAssociativeArray")
@@ -699,7 +678,36 @@ Function ll_send(event As Object)
 
     request = baseUrl + appKey + path + callback + data + params
     ll_debug_log("ll_send(): " + urlTransfer.Unescape(request))
-    ll_upload(request)
+
+    ' Put event on the event queue
+    ll_add_request_to_pending(request)
+    ll_upload_next_pending()
+End Function
+
+Function ll_add_request_to_pending(request As String)
+    urlTransfer = CreateObject("roUrlTransfer")
+    ll_debug_log("ll_add_request_to_pending: " + urlTransfer.Unescape(request))
+
+    pending_requests = ParseJson(ll_read_registry("pending_requests", "[]"))
+
+    ll_debug_log("there are " + ll_to_string(pending_requests.Count()) + " pending requests")
+
+    pending_requests.Push(request)
+
+    ll_write_registry_dyn("pending_requests", pending_requests)
+End Function
+
+Function ll_upload_next_pending()
+    urlTransfer = CreateObject("roUrlTransfer")
+    pending_requests = ParseJson(ll_read_registry("pending_requests", "[]"))
+    ' ll_debug_log("before pending_requests: " + ll_read_registry("pending_requests", "[]"))
+    next_request = pending_requests.Shift()
+    ll_debug_log("ll_upload_next_pending: " + urlTransfer.Unescape(next_request))
+    if next_request <> invalid then
+        ll_write_registry_dyn("pending_requests", pending_requests)
+        ' ll_debug_log("after pending_requests: " + ll_read_registry("pending_requests", "[]"))
+        ll_upload(next_request)
+    end if
 End Function
 
 Function ll_upload(url As String)
@@ -715,11 +723,53 @@ Function ll_upload(url As String)
     http.AddHeader("Content-Type", "application/x-www-form-urlencoded")
     http.EnableEncodings(true)
 
+    ll_debug_log("outstandingRequests: " + ll_to_string(m.localytics.outstandingRequests.Count()))
     if (http.AsyncGetToString())
         m.localytics.outstandingRequests[url] = http
-    endif
+    end if
 End Function
 
+Function ll_process_outstanding_request()
+    ll_debug_log("ll_process_outstanding_request()")
+    outstandingRequests = createObject("roAssociativeArray")
+
+    for each item in m.localytics.outstandingRequests.Items()
+        http = item.value
+        if type(http) = "roUrlTransfer" then
+            port = http.GetPort()
+            if type(port) = "roMessagePort" then
+                event = port.GetMessage()
+                if type(event) = "roUrlEvent"
+                    ll_debug_log("process_done: " + event.GetString())
+
+                    if ll_should_retry_request(event.GetResponseCode()) then
+                        ll_add_request_to_pending(http.GetUrl())
+                    end if
+
+                    ll_upload_next_pending()
+                else
+                    outstandingRequests[item.key] = item.value
+                    ll_debug_log("process_not_done: " + item.key)
+                end if
+            end if
+        end if
+    end for
+
+    m.localytics.outstandingRequests = outstandingRequests
+End Function
+
+Function ll_should_retry_request(responseCode As Integer) as Boolean
+    ll_debug_log("roUrlEvent response code: " + ll_to_string(responseCode))
+    if (responseCode >= 500 and responseCode <= 599) or responseCode = 429 or responseCode < 0
+        ll_debug_log("request server error " + ll_to_string(responseCode) + ": adding back to pending requests")
+        return true
+    else if responseCode >= 400 and responseCode <= 499
+        ll_debug_log("request client error " + ll_to_string(responseCode) + ": skipping request")
+        return false
+    end if
+
+    return false
+End Function
 
 '************************************************************
 ' Customer Profile Functions
@@ -797,7 +847,7 @@ Function ll_patch_profile(scope as String, attributes=invalid As Object)
 
     if (http.AsyncPostFromString(body))
         m.localytics.outstandingRequests[endpoint+body] = http
-    endif
+    end if
 End Function
 
 
