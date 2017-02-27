@@ -95,7 +95,7 @@ End Function
 ' Note:
 ' - "fresh" will clear previous stored values
 ' - "debug" will log some messages
-Function initLocalytics(appKey As String, sessionTimeout=10 As Integer, secured=true As Boolean, fresh=false As Boolean, debug=true As Boolean) As Void
+Function initLocalytics(appKey As String, sessionTimeout=1800 As Integer, secured=true As Boolean, fresh=false As Boolean, debug=true As Boolean) As Void
     new_localytics = CreateObject("roAssociativeArray")
     m.localytics = new_localytics
 
@@ -111,7 +111,7 @@ Function initLocalytics(appKey As String, sessionTimeout=10 As Integer, secured=
     end if
 
     new_localytics.secured = secured
-    new_localytics.endpoint = new_localytics.uriScheme + "://analytics.localytics.com/api/v2/applications/"
+    new_localytics.endpoint = new_localytics.uriScheme + "://analytics.localytics.com/api/v2/applifuckingcations/"
     new_localytics.profileEndpoint = new_localytics.uriScheme + "://profile.localytics.com/v1/apps/"
     new_localytics.appKey = appKey
     new_localytics.sessionTimeout = sessionTimeout
@@ -686,12 +686,7 @@ End Function
 
 Function ll_add_request_to_pending(request As String)
     urlTransfer = CreateObject("roUrlTransfer")
-    ll_debug_log("ll_add_request_to_pending: " + urlTransfer.Unescape(request))
-
     pending_requests = ParseJson(ll_read_registry("pending_requests", "[]"))
-
-    ll_debug_log("there are " + ll_to_string(pending_requests.Count()) + " pending requests")
-
     pending_requests.Push(request)
 
     ll_write_registry_dyn("pending_requests", pending_requests)
@@ -700,12 +695,10 @@ End Function
 Function ll_upload_next_pending()
     urlTransfer = CreateObject("roUrlTransfer")
     pending_requests = ParseJson(ll_read_registry("pending_requests", "[]"))
-    ' ll_debug_log("before pending_requests: " + ll_read_registry("pending_requests", "[]"))
+    ll_debug_log("Uploading next event.  Queue size: (" + ll_to_string(pending_requests.Count()) + ")")
     next_request = pending_requests.Shift()
-    ll_debug_log("ll_upload_next_pending: " + urlTransfer.Unescape(next_request))
     if next_request <> invalid then
         ll_write_registry_dyn("pending_requests", pending_requests)
-        ' ll_debug_log("after pending_requests: " + ll_read_registry("pending_requests", "[]"))
         ll_upload(next_request)
     end if
 End Function
@@ -723,7 +716,6 @@ Function ll_upload(url As String)
     http.AddHeader("Content-Type", "application/x-www-form-urlencoded")
     http.EnableEncodings(true)
 
-    ll_debug_log("outstandingRequests: " + ll_to_string(m.localytics.outstandingRequests.Count()))
     if (http.AsyncGetToString())
         m.localytics.outstandingRequests[url] = http
     end if
@@ -732,7 +724,7 @@ End Function
 Function ll_process_outstanding_request()
     ll_debug_log("ll_process_outstanding_request()")
     outstandingRequests = createObject("roAssociativeArray")
-
+    ll_debug_log("Processing - there are " + ll_to_string(m.localytics.outstandingRequests.Count()) + " requests outstanding")
     for each item in m.localytics.outstandingRequests.Items()
         http = item.value
         if type(http) = "roUrlTransfer" then
@@ -746,7 +738,7 @@ Function ll_process_outstanding_request()
                         ll_add_request_to_pending(http.GetUrl())
                     end if
 
-                    ll_upload_next_pending()
+
                 else
                     outstandingRequests[item.key] = item.value
                     ll_debug_log("process_not_done: " + item.key)
@@ -756,6 +748,7 @@ Function ll_process_outstanding_request()
     end for
 
     m.localytics.outstandingRequests = outstandingRequests
+    ll_upload_next_pending()
 End Function
 
 Function ll_should_retry_request(responseCode As Integer) as Boolean
