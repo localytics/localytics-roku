@@ -111,7 +111,7 @@ Function initLocalytics(appKey As String, sessionTimeout=1800 As Integer, secure
     end if
 
     new_localytics.secured = secured
-    new_localytics.endpoint = new_localytics.uriScheme + "://analytics.localytics.com/api/v2/applifuckingcations/"
+    new_localytics.endpoint = new_localytics.uriScheme + "://analytics.localytics.com/api/v2/applications/"
     new_localytics.profileEndpoint = new_localytics.uriScheme + "://profile.localytics.com/v1/apps/"
     new_localytics.appKey = appKey
     new_localytics.sessionTimeout = sessionTimeout
