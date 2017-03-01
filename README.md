@@ -31,8 +31,8 @@ m.top.observeField("localyticsTask", "ll_init_component")
 ...
 
 Sub ll_init_component()
-  if (m.LocalyticsTask = Invalid) then
-    if (m.top.localyticsTask <> Invalid) then
+  if (m.LocalyticsTask = invalid) then
+    if (m.top.localyticsTask <> invalid) then
       m.LocalyticsTask = m.top.localyticsTask
     end if
   end if
@@ -41,15 +41,15 @@ End Sub
 ```
 Finally, to tag an event, we must check to see if that task has been initialized:
 ```
-Function safeFireLocalyticsEvent(event as Object) as Void
-  if (m.LocalyticsTask <> Invalid) then
-    m.LocalyticsTask.event = event
+Function safeFireLocalytics(key as String, value as Object) as Void
+  if (m.LocalyticsTask <> invalid) then
+    m.LocalyticsTask[key] = value
   end if
 End Function
 ```
 Then, we can tag our event:
 ```
-safeFireLocalyticsEvent({name: "GridScene Item Focused", attributes: { a: 1, b: 2}})
+safeFireLocalytics("event", {name: "GridScene Item Focused", attributes: { a: 1, b: 2}})
 ```
 
 ### Initialization (only available from main.brs)

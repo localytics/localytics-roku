@@ -32,9 +32,9 @@ Sub ll_init_component()
   end if
 End Sub
 
-Function safeFireLocalytics(field as String, event as Object) as Void
+Function safeFireLocalytics(key as String, value as Object) as Void
   if (m.LocalyticsTask <> invalid) then
-    m.LocalyticsTask[field] = event
+    m.LocalyticsTask[key] = value
   end if
 End Function
 

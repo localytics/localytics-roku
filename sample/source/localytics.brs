@@ -689,9 +689,9 @@ Function ll_add_request_to_pending(url As String, bodyData As Object, requestTyp
 
     request = createObject("roAssociativeArray")
     request.url = url
-    If (bodyData <> Invalid) then
-      request.body = bodyData
-    End If
+    if (bodyData <> invalid) then
+        request.body = bodyData
+    end if
     request.requestType = requestType
     pending_requests.Push(request)
 
