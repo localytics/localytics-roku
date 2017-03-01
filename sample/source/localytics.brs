@@ -58,7 +58,7 @@ Function execLocalyticsLoop()
                     end if
                 else if field = "profileAttribute" then
                     if data.scope <> invalid and data.key <> invalid then
-                        ll_set_profile_attribute(data.scope, data.key, data.attributes)
+                        ll_set_profile_attribute(data.scope, data.key, data.value)
                     end if
                 else if field = "customDimension" then
                     if data.i <> invalid and data.value <> invalid then
@@ -95,7 +95,7 @@ End Function
 ' Note:
 ' - "fresh" will clear previous stored values
 ' - "debug" will log some messages
-Function initLocalytics(appKey As String, sessionTimeout=10 As Integer, secured=true As Boolean, fresh=false As Boolean, debug=true As Boolean) As Void
+Function initLocalytics(appKey As String, sessionTimeout=1800 As Integer, secured=true As Boolean, fresh=false As Boolean, debug=true As Boolean) As Void
     new_localytics = CreateObject("roAssociativeArray")
     m.localytics = new_localytics
 
@@ -577,27 +577,6 @@ Function ll_check_session_timeout(isInit=false as Boolean)
     end if
 End Function
 
-Function ll_process_outstanding_request()
-    ll_debug_log("ll_process_outstanding_request()")
-
-    for each key in m.localytics.outstandingRequests
-        http = m.localytics.outstandingRequests[key]
-        if type(http) = "roUrlTransfer" then
-            port = http.GetPort()
-            if type(port) = "roMessagePort" then
-                event = port.GetMessage()
-                if type(event) = "roUrlEvent"
-                    ll_debug_log("roUrlEvent response code: " + ll_to_string(event.GetResponseCode()))
-                    m.localytics.outstandingRequests.Delete(key)
-                    ll_debug_log("process_done: " + event.GetString())
-                else
-                    ll_debug_log("process_not_done: " + key)
-                end if
-            end if
-        end if
-    next
-End Function
-
 Function ll_restore_session() As Boolean
     ll_debug_log("ll_restore_session()")
     oldSession = CreateObject("roAssociativeArray")
@@ -699,7 +678,39 @@ Function ll_send(event As Object)
 
     request = baseUrl + appKey + path + callback + data + params
     ll_debug_log("ll_send(): " + urlTransfer.Unescape(request))
-    ll_upload(request)
+
+    ' Put event on the event queue
+    ll_add_request_to_pending(request, invalid, m.localytics.constants.request_type_analytics)
+    ll_upload_next_pending()
+End Function
+
+Function ll_add_request_to_pending(url As String, bodyData As Object, requestType as String)
+    pending_requests = ParseJson(ll_read_registry("pending_requests", "[]"))
+
+    request = createObject("roAssociativeArray")
+    request.url = url
+    if (bodyData <> invalid) then
+        request.body = bodyData
+    end if
+    request.requestType = requestType
+    pending_requests.Push(request)
+
+    ll_write_registry_dyn("pending_requests", pending_requests)
+End Function
+
+Function ll_upload_next_pending()
+    urlTransfer = CreateObject("roUrlTransfer")
+    pending_requests = ParseJson(ll_read_registry("pending_requests", "[]"))
+    ll_debug_log("Uploading next event.  Queue size: (" + ll_to_string(pending_requests.Count()) + ")")
+    next_request = pending_requests.Shift()
+    if next_request <> invalid then
+        ll_write_registry_dyn("pending_requests", pending_requests)
+        if (next_request.requestType = m.localytics.constants.request_type_analytics) then
+          ll_upload(next_request.url)
+        else
+          ll_upload_profile(next_request.url, next_request.body)
+        end if
+    end if
 End Function
 
 Function ll_upload(url As String)
@@ -716,10 +727,54 @@ Function ll_upload(url As String)
     http.EnableEncodings(true)
 
     if (http.AsyncGetToString())
-        m.localytics.outstandingRequests[url] = http
-    endif
+        analyticsRequest = CreateObject("roAssociativeArray")
+        analyticsRequest.type="analytics"
+        analyticsRequest.url=url
+        analyticsRequest.request=http
+        m.localytics.outstandingRequests[url]=analyticsRequest
+    end if
 End Function
 
+Function ll_process_outstanding_request()
+    ll_debug_log("ll_process_outstanding_request()")
+    outstandingRequests = createObject("roAssociativeArray")
+    ll_debug_log("Processing - there are " + ll_to_string(m.localytics.outstandingRequests.Count()) + " requests outstanding")
+    for each item in m.localytics.outstandingRequests.Items()
+        http = item.value.request
+        if type(http) = "roUrlTransfer" then
+            port = http.GetPort()
+            if type(port) = "roMessagePort" then
+                event = port.GetMessage()
+                if type(event) = "roUrlEvent"
+                    ll_debug_log("process_done: " + event.GetString())
+
+                    if ll_should_retry_request(event.GetResponseCode()) then
+                        ll_add_request_to_pending(item.value.url, item.value.body, item.value.type)
+                    end if
+                else
+                    outstandingRequests[item.key] = item.value
+                    ll_debug_log("process_not_done: " + item.key)
+                end if
+            end if
+        end if
+    end for
+
+    m.localytics.outstandingRequests = outstandingRequests
+    ll_upload_next_pending()
+End Function
+
+Function ll_should_retry_request(responseCode As Integer) as Boolean
+    ll_debug_log("roUrlEvent response code: " + ll_to_string(responseCode))
+    if (responseCode >= 500 and responseCode <= 599) or responseCode = 429 or responseCode < 0
+        ll_debug_log("request server error " + ll_to_string(responseCode) + ": adding back to pending requests")
+        return true
+    else if responseCode >= 400 and responseCode <= 499
+        ll_debug_log("request client error " + ll_to_string(responseCode) + ": skipping request")
+        return false
+    end if
+
+    return false
+End Function
 
 '************************************************************
 ' Customer Profile Functions
@@ -764,11 +819,21 @@ End Function
 
 Function ll_patch_profile(scope as String, attributes=invalid As Object)
     customerId = ll_read_registry(m.localytics.keys.profile_customer_id)
-    installId = ll_read_registry(m.localytics.keys.install_uuid, ll_generate_guid())
 
     if attributes = invalid or attributes.IsEmpty() or (not ll_is_valid_string(customerId)) then return -1
 
     endpoint = m.localytics.profileEndpoint + m.localytics.appKey + "/profiles/" + customerId
+
+    bodyData = { attributes: attributes, database: scope}
+
+    ll_add_request_to_pending(endpoint, bodyData, m.localytics.constants.request_type_profile)
+
+    ll_upload_next_pending()
+End Function
+
+Function ll_upload_profile(endpoint as String, bodyData as Object)
+    customerId = ll_read_registry(m.localytics.keys.profile_customer_id)
+    installId = ll_read_registry(m.localytics.keys.install_uuid, ll_generate_guid())
 
     http = CreateObject("roUrlTransfer")
 
@@ -788,16 +853,19 @@ Function ll_patch_profile(scope as String, attributes=invalid As Object)
     http.AddHeader("x-customer-id", customerId)
     http.EnableEncodings(true)
 
-    bodyData = { attributes: attributes, database: scope}
-
     ' Must nest it in attributes json
     body = ll_set_params_as_string(bodyData)
 
     ll_debug_log("ll_patch_profile(url:" +endpoint+ ", body: " +body+ ")")
 
-    if (http.AsyncPostFromString(body))
-        m.localytics.outstandingRequests[endpoint+body] = http
-    endif
+    if (http.AsyncPostFromString(body)) then
+        profileRequest = CreateObject("roAssociativeArray")
+        profileRequest.type="profile"
+        profileRequest.url=endpoint
+        profileRequest.body=bodyData
+        profileRequest.request=http
+        m.localytics.outstandingRequests[endpoint+body] = profileRequest
+    end if
 End Function
 
 
@@ -852,6 +920,7 @@ Function ll_get_constants() As Object
 
 
     constants.section_metadata = "com.localytics.metadata"
+    constants.section_session = "com.localytics.session"
     constants.section_playback = "com.localytics.playback"
 
     constants.finish_reason_playback_ended = "Playback Ended"
@@ -876,6 +945,10 @@ Function ll_get_constants() As Object
     constants.end_reason = "End Reason"
     constants.content_time_to_buffer_seconds = "Content Time to Buffer (Seconds)"
     constants.content_timestamp = "Content Timestamp"
+
+    constants.request_type_analytics = "analytics"
+    constants.request_type_profile = "profile"
+
     return constants
 End Function
 
