@@ -32,15 +32,9 @@ Sub ll_init_component()
   end if
 End Sub
 
-Function safeFireLocalyticsEvent(event as Object) as Void
+Function safeFireLocalytics(field as String, event as Object) as Void
   if (m.LocalyticsTask <> invalid) then
-    m.LocalyticsTask.event = event
-  end if
-End Function
-
-Function safeFireLocalyticsProfile(profileAttribute as Object) as Void
-  if (m.LocalyticsTask <> invalid) then
-    m.LocalyticsTask.profileAttribute = profileAttribute
+    m.LocalyticsTask[field] = event
   end if
 End Function
 
@@ -48,10 +42,14 @@ End Function
 Sub OnItemFocused()
     itemFocused = m.top.itemFocused
     ? ">> GridScreen > OnItemFocused"; itemFocused
-    m.focusCount = m.focusCount + 1
+    m.focusCount++
 
-    safeFireLocalyticsEvent({name: "GridScene Item Focused", attributes: { a: 1, b: 2}})
-    safeFireLocalyticsProfile({scope: "org", key: "rokuTest", value: "Focus Count" + m.focusCount.ToStr()})
+    safeFireLocalytics("event", {name: "GridScene Item Focused", attributes: { a: 1, b: 2}})
+    if (m.focusCount MOD 2 = 0) then
+      safeFireLocalytics("profileAttribute", {scope: "org", key: "rokuTest", value: "Focus Count" + m.focusCount.ToStr()})
+    else
+      safeFireLocalytics("profileAttribute", {scope: "org", key: "rokuTest", value: invalid})
+    end if
 
     'When an item gains the key focus, set to a 2-element array,
     'where element 0 contains the index of the focused row,
