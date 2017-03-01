@@ -11,6 +11,7 @@ Function Init()
     m.top.observeField("localyticsTask", "ll_init_component")
     m.Description = m.top.findNode("Description")
     m.Background = m.top.findNode("Background")
+    m.focusCount = 0
 End Function
 
 ' handler of focused child in GridScreen
@@ -37,13 +38,20 @@ Function safeFireLocalyticsEvent(event as Object) as Void
   end if
 End Function
 
+Function safeFireLocalyticsProfile(profileAttribute as Object) as Void
+  if (m.LocalyticsTask <> invalid) then
+    m.LocalyticsTask.profileAttribute = profileAttribute
+  end if
+End Function
 
 ' handler of focused item in RowList
 Sub OnItemFocused()
     itemFocused = m.top.itemFocused
     ? ">> GridScreen > OnItemFocused"; itemFocused
+    m.focusCount = m.focusCount + 1
 
     safeFireLocalyticsEvent({name: "GridScene Item Focused", attributes: { a: 1, b: 2}})
+    safeFireLocalyticsProfile({scope: "org", key: "rokuTest", value: "Focus Count" + m.focusCount.ToStr()})
 
     'When an item gains the key focus, set to a 2-element array,
     'where element 0 contains the index of the focused row,
