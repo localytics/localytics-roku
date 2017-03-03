@@ -43,7 +43,7 @@
     <field id="customer" type="assocarray"/>
     <field id="profileAttribute" type="assocarray"/>
     <field id="customDimension" type="assocarray"/>
-    <field id="content" type="assocarray"/>
-    <field id="playerObject" type="assocarray"/>
+    <field id="videoNode" type="node"/>
+    <field id="videoMetaData" type="assocarray"/>
   </interface>
 </component>

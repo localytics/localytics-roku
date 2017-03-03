@@ -31,9 +31,9 @@ m.top.observeField("localyticsTask", "ll_init_component")
 ...
 
 Sub ll_init_component()
-  if (m.LocalyticsTask = invalid) then
+  if (m.localyticsTask = invalid) then
     if (m.top.localyticsTask <> invalid) then
-      m.LocalyticsTask = m.top.localyticsTask
+      m.localyticsTask = m.top.localyticsTask
     end if
   end if
 End Sub
@@ -65,7 +65,7 @@ safeFireLocalytics("event", {name: "GridScene Item Focused", attributes: { a: 1,
 *ll_set_customer_last_name(value As String)*
 *ll_set_customer_full_name(value As String)*
 ```
-task.customer = {id: myId, email: myEmail, firstName: myFirstName, lastName: myLastName, fullName: myFullName}
+m.localyticsTask.customer = {id: myId, email: myEmail, firstName: myFirstName, lastName: myLastName, fullName: myFullName}
 ```
 
 If available, CustomerId should be set. Email and name fields are also available to further identify the user Profile.
@@ -73,7 +73,7 @@ You can set other custom attribute with the following:
 
 *ll_set_profile_attribute(scope as String, key As String, value=invalid As Dynamic)*
 ```
-task.profileAttribute = {scope: myScope, key: myKey, value: myValue}
+m.localyticsTask.profileAttribute = {scope: myScope, key: myKey, value: myValue}
 ```
 * scope("org" or "app"): set whether to set "org" or "app" level profile
 * key: Profile attribute name
@@ -82,44 +82,30 @@ task.profileAttribute = {scope: myScope, key: myKey, value: myValue}
 ###Custom Dimensions
 *ll_set_custom_dimension(i as Integer, value as String)*
 ```
-task.customDimension = {i: myIndex, value: myValue}
+m.localyticsTask.customDimension = {i: myIndex, value: myValue}
 ```
 * Set Custom Dimension with their index and value.
 
 ###Tag Events
 *ll_tag_event(name as String, attributes=invalid as Object, customerValueIncrease=0 as Integer)*
 ```
-task.event = {name: myName, attributes:{attr1: val1, attr2: val2}}
+m.localyticsTask.event = {name: myName, attributes:{attr1: val1, attr2: val2}}
 ```
 
 ###Tag Screens
 *ll_tag_screen(name as String)*
 ```
-task.screen = {name: myScreen}
+m.localyticsTask.screen = {name: myScreen}
 ```
 
-### Set Content Details
+### Tag Video Player Details
 ######Provide details about the content that will be played.
-*ll_set_content_id(value="N/A" as Dynamic)*
-*ll_set_content_length(value as Integer)*
-*ll_set_content_title(value="N/A" as Dynamic)*
-*ll_set_content_series_title(value="N/A" as Dynamic)*
-*ll_set_content_category(value="N/A" as Dynamic)*
+*ll_process_player_metrics()*
+*ll_process_video_metadata(data)*
 ```
-task.content = {id: myId, length: myLength, title: myTitle, seriesTitle: seriesTitle, category: category}
-```
-
-These parameters should be set before the playback ends, at which point they will be processed.
-
-All are optional parameters, but setting these with Integer or String value is highly recommended:
-* Set the content length explicitly to allow proper calculation of some playback metrics.
-* Set the other content metadata attributes to include in the "Video Watched" auto-tag event.
-
-#####Now pass the player events to the Localytics SDK to aggegrate playback metrics inside the player event loop.
-
-*ll_process_player_metrics(event as Object)*
-```
-task.playerObject = {event: myEvent}
+m.localyticsTask.videoNode = myVideoPlayer
+videoData = { title: myTitle }
+m.localyticsTask.videoMetaData = videoData
 ```
 
 ### Other notes

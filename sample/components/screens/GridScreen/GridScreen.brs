@@ -42,14 +42,6 @@ End Function
 Sub OnItemFocused()
     itemFocused = m.top.itemFocused
     ? ">> GridScreen > OnItemFocused"; itemFocused
-    m.focusCount++
-
-    safeFireLocalytics("event", {name: "GridScene Item Focused", attributes: { a: 1, b: 2}})
-    if (m.focusCount MOD 2 = 0) then
-      safeFireLocalytics("profileAttribute", {scope: "org", key: "rokuTest", value: "Focus Count" + m.focusCount.ToStr()})
-    else
-      safeFireLocalytics("profileAttribute", {scope: "org", key: "rokuTest", value: invalid})
-    end if
 
     'When an item gains the key focus, set to a 2-element array,
     'where element 0 contains the index of the focused row,

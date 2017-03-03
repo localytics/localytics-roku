@@ -21,7 +21,6 @@ Function Init()
     m.LocalyticsTask = m.top.findNode("LocalyticsTask")
     m.localyticsTask.observeField("started", "OnLocalyticsTaskStarted")
     m.LocalyticsTask.control = "RUN"
-
 End Function
 
 'Helper functions to initialize the task
@@ -43,6 +42,12 @@ Sub OnRowItemSelected()
     m.GridScreen.visible = "false"
     selectedItem = m.GridScreen.focusedContent
 
+    ' To automatically tag video playback events, send the video play node to localytics
+    ' any attributes set on the videoMetaData associative array will be included with the event'
+    m.LocalyticsTask.videoNode = m.videoPlayer
+    videoData = { title: selectedItem.Title }
+    m.LocalyticsTask.videoMetaData = videoData
+
     'init of video player and start playback
     m.videoPlayer.visible = true
     m.videoPlayer.setFocus(true)
@@ -52,7 +57,7 @@ Sub OnRowItemSelected()
 End Sub
 
 Sub OnVideoPlayerStateChange()
-    ? "HomeScene > OnVideoPlayerStateChange : state == ";m.videoPlayer.state
+    ? "HomeScene > OnVideoPlayerStateChange : state == "+m.videoPlayer.state
     if m.videoPlayer.state = "error"
         'hide vide player in case of error
         m.videoPlayer.visible = false

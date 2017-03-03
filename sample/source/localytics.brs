@@ -1,12 +1,6 @@
-
 Function init()
     m.top.functionName = "execLocalyticsLoop"
 end Function
-
-' TODO: test that session length looks proper
-' test screens
-' push outstanding requests into the registry, and retry if bad response codes
-' add a registry section for persistent data (customer, profile, etc.)
 
 'Runs as a part of LocalyticsTask'
 Function execLocalyticsLoop()
@@ -16,8 +10,8 @@ Function execLocalyticsLoop()
     m.top.observeField("customer", port)
     m.top.observeField("profileAttribute", port)
     m.top.observeField("customDimension", port)
-    m.top.observeField("content", port)
-    m.top.observeField("playerObject", port)
+    m.top.observeField("videoNode", port)
+    m.top.observeField("videoMetaData", port)
 
     ll_restore_context()
 
@@ -64,26 +58,11 @@ Function execLocalyticsLoop()
                     if data.i <> invalid and data.value <> invalid then
                         ll_set_custom_dimension(data.i, data.value)
                     end if
-                else if field = "content" then
-                    if data.id <> invalid then
-                        ll_set_content_id(data.id)
-                    end if
-                    if data.length <> invalid then
-                        ll_set_content_length(data.length)
-                    end if
-                    if data.title <> invalid then
-                        ll_set_content_title(data.title)
-                    end if
-                    if data.seriesTitle <> invalid then
-                        ll_set_content_series_title(data.seriesTitle)
-                    end if
-                    if data.category <> invalid then
-                        ll_set_content_category(data.category)
-                    end if
-                else if field = "playerObject" then
-                    if data.event <> invalid then
-                        ll_process_player_metrics(data.event)
-                    end if
+                else if field = "videoNode" then
+                    m.localytics.videoPlayer = data
+                    ll_process_player_metrics()
+                else if field = "videoMetaData" then
+                    ll_process_video_metadata(data)
                 end if
             end if
         end if
@@ -122,7 +101,7 @@ Function initLocalytics(appKey As String, sessionTimeout=1800 As Integer, secure
     new_localytics.constants = ll_get_constants()
 
     if fresh then
-        ll_delete_session_data(true)
+        ll_delete_session_data()
     end if
 
     'persist the interesting bits
@@ -244,13 +223,11 @@ Function ll_close_session(isInit=false as Boolean)
     ll_delete_session_data()
 End Function
 
-Function ll_delete_session_data(clearAllFields=false As Boolean, section="com.localytics.session" As String)
-    sec = CreateObject("roRegistrySection", section)
+Function ll_delete_session_data()
+    sec = CreateObject("roRegistrySection", m.localytics.constants.section_session)
 
     for each key in sec.GetKeyList()
-        if clearAllFields then
-            sec.Delete(key)
-        end if
+      sec.Delete(key)
     next
 
     sec.Flush()
@@ -297,7 +274,7 @@ Function ll_tag_screen(name as String)
 
     screenFlows = ll_get_session_value(m.localytics.keys.screen_flows)
 
-    if not ll_is_string(screenFlows)
+    if (not ll_is_string(screenFlows)) or screenFlows.Len() = 0
         screenFlows = Chr(34) + name + Chr(34)
         ll_set_session_value(m.localytics.keys.screen_flows, screenFlows)
     else if screenFlows.Len() < m.localytics.maxScreenFlowLength then
@@ -358,129 +335,62 @@ End Function
 
 
 ' Sets Content Metadata for auto-tagging. If "value" is empty, the key is deleted.
-Function ll_set_content_metadata(key as String, value as Dynamic, required=false as Boolean, flush=true as Boolean)
-    ll_debug_log("ll_set_content_metadata("+ key + ", " + _str_string(value) + ")")
-
-    if ll_is_string(key)
-        strValue = ll_to_string(value)
-        if ll_is_valid_string(strValue) then
-            ll_write_registry(key, strValue, flush, m.localytics.constants.section_metadata)
-        else if required then
-            ll_write_registry(key, m.localytics.constants.not_available, flush, m.localytics.constants.section_metadata) ' Remove the attribute if value is invalid or empty
-        else
-            ll_delete_registry(key, m.localytics.constants.section_metadata, flush)
-        end if
-    end if
+Function ll_process_video_metadata(data)
+  ll_clear_registry(true,m.localytics.constants.section_metadata)
+  for each item in data.items()
+      ll_write_registry_dyn(item.key, item.value, false, m.localytics.constants.section_metadata)
+  end for
+  ll_write_registry_dyn("metadataTime", ll_get_timestamp_generator(), true, m.localytics.constants.section_metadata)
 End Function
 
-Function ll_set_content_length(value as Integer, flush=true as Boolean)
-    ll_debug_log("ll_set_content_length( Content Length: " + value.ToStr() + ")")
-
-    if value > 0 then
-        ll_write_registry(m.localytics.keys.auto_playback_length, value.ToStr(), flush, m.localytics.constants.section_playback)
-    else
-        ll_delete_registry(m.localytics.keys.auto_playback_length, m.localytics.constants.section_playback, flush)
-    end if
-End Function
-
-Function ll_set_content_id(value="N/A" as Dynamic)
-    ll_set_content_metadata(m.localytics.constants.content_id, value, true, true)
-End Function
-
-Function ll_set_content_title(value="N/A" as Dynamic)
-    ll_set_content_metadata(m.localytics.constants.content_title, value, true, true)
-End Function
-
-Function ll_set_content_series_title(value="N/A" as Dynamic)
-    ll_set_content_metadata(m.localytics.constants.content_series_title, value, true, true)
-End Function
-
-Function ll_set_content_category(value="N/A" as Dynamic)
-    ll_set_content_metadata(m.localytics.constants.content_category, value, true, true)
-End Function
-
-Function ll_process_player_metrics(event as Object)
+Function ll_process_player_metrics()
     ll_debug_log("ll_process_player_metrics()")
 
-    if type(event) = "roVideoScreenEvent" or type(event) = "roVideoPlayerEvent" then
+    if (m.localytics.videoPlayer <> Invalid and m.localytics.videoPlayer.streamInfo <> Invalid) then
         sectionName = m.localytics.constants.section_playback
-        message = "Type: unexpected"
 
-        pausedSession = ll_get_session_value(m.localytics.keys.auto_playback_paused_session, false, true)
-        if not (event.isResumed() or (ll_is_boolean(pausedSession) and pausedSession = true)) then
+        state = m.localytics.videoPlayer.state
+        position = m.localytics.videoPlayer.position
+        streamInfo = m.localytics.videoPlayer.streamInfo
+        timeToStartStreaming = m.localytics.videoPlayer.timeToStartStreaming
+
+        message = "Playback state: " + state + ", Position: " + position.ToStr()
+        ' If playback is active, make sure to keep the session alive
+        if (state = "buffering" or state = "playing" or state = "paused") then
             ll_keep_session_alive("ll_process_player_metrics")
         end if
+        if state = "error" then
+          message = message + ", Message: " + m.localytics.videoPlayer.errorMsg
 
-        if event.isRequestFailed()
-            message = "Type: isRequestFailed, Index: " + event.GetIndex().ToStr() + ", Message: " + event.GetMessage()
+          ll_write_registry(m.localytics.keys.auto_playback_pending, "true", false, sectionName)
+          ll_write_registry(m.localytics.keys.auto_playback_url, streamInfo.streamUrl, false, sectionName)
 
-            ll_write_registry(m.localytics.keys.auto_playback_pending, "true", false, sectionName)
-            ll_write_registry(m.localytics.keys.auto_playback_url, event.GetInfo()["Url"], false, sectionName)
-            ll_write_registry(m.localytics.keys.auto_playback_end_reason, m.localytics.constants.finish_reason_playback_error, true, sectionName)
-        else if event.isPlaybackPosition() then
-            message = "Type: isPlaybackPosition,  Index: " + event.GetIndex().ToStr()
+          ll_write_registry(m.localytics.keys.auto_playback_end_reason, m.localytics.constants.finish_reason_playback_error, true, sectionName)
+        else if state = "playing" then
+          ll_write_registry(m.localytics.keys.auto_playback_pending, "true", false, sectionName)
+          ll_write_registry(m.localytics.keys.auto_playback_url, streamInfo.streamUrl, false, sectionName)
+          ll_write_registry(m.localytics.keys.auto_playback_buffer, timeToStartStreaming.ToStr(), false, sectionName)
+          content_length = m.localytics.videoPlayer.duration
+          if content_length > 0 then
+              ll_write_registry(m.localytics.keys.auto_playback_length, content_length.ToStr(), false, m.localytics.constants.section_playback)
+          else
+              ll_delete_registry(m.localytics.keys.auto_playback_length, m.localytics.constants.section_playback, false)
+          end if
 
-            bufferStartTime = ll_get_session_value(m.localytics.keys.auto_playback_buffer_start, true)
-            bufferTime = ll_get_session_value(m.localytics.keys.auto_playback_buffer, true)
-            if ll_is_integer(bufferStartTime) and (not ll_is_integer(bufferTime)) then
-                'Only set buffer time if it hasn't been set yet
-                timestamp = ll_get_timestamp_generator()
-                bufferTotal = timestamp.asSeconds() - bufferStartTime
-                ll_write_registry(m.localytics.keys.auto_playback_buffer, bufferTotal.ToStr(), false, sectionName)
-                ll_set_session_value(m.localytics.keys.auto_playback_buffer, bufferTotal, false, false)
-            end if
+          timeWatched = ll_get_session_value(m.localytics.keys.auto_playback_watched, true)
+          if (not ll_is_integer(timeWatched)) or position > timeWatched then 'Same as MAX(timeWatched, position)
+              ll_write_registry(m.localytics.keys.auto_playback_watched, position.ToStr(), false, sectionName)
+          end if
 
-            playbackPosition = event.GetIndex().ToStr()
-
-            timeWatched = ll_get_session_value(m.localytics.keys.auto_playback_watched, true)
-            if (not ll_is_integer(timeWatched)) or playbackPosition > timeWatched then 'Same as MAX(timeWatched, playbackPosition)
-                ll_set_session_value(m.localytics.keys.auto_playback_watched, playbackPosition, false, false)
-                ll_write_registry(m.localytics.keys.auto_playback_watched, playbackPosition, false, sectionName)
-            end if
-
-            ll_write_registry(m.localytics.keys.auto_playback_current_time, playbackPosition, true, sectionName)
-        else if event.isStreamStarted()
-            message = "Type: isStreamStarted,  Index: " + event.GetIndex().ToStr() + ", Url: " + event.GetInfo()["Url"]
-
-            IsUnderrun = event.GetInfo()["IsUnderrun"]
-            if IsUnderrun = false then
-                timestamp = ll_get_timestamp_generator()
-                ll_set_session_value(m.localytics.keys.auto_playback_buffer_start, timestamp.asSeconds(), false, false)
-            end if
-
-            ll_write_registry(m.localytics.keys.auto_playback_pending, "true", false, sectionName)
-            ll_write_registry(m.localytics.keys.auto_playback_url, event.GetInfo()["Url"], true, sectionName)
-        else if event.isFullResult()
-            message = "Type: isFullResult"
-
-            ll_write_registry(m.localytics.keys.auto_playback_end_reason, m.localytics.constants.finish_reason_playback_ended, true, sectionName)
-        else if event.isPartialResult()
-            message = "Type: isPartialResult"
-
-            ll_write_registry(m.localytics.keys.auto_playback_end_reason, m.localytics.constants.finish_reason_user_exited, true, sectionName)
-        else if event.isPaused()
-            message = "Type: isPaused"
-            ll_set_session_value(m.localytics.keys.auto_playback_paused_session, true, false, false)
-        else if event.isResumed()
-            message = "Type: isResumed"
-            ll_set_session_value(m.localytics.keys.auto_playback_paused_session, false, false, false)
-        else if event.isScreenClosed()
-            message = "Type: isScreenClosed"
-
-            ' Clear temporary values
-            ll_set_session_value(m.localytics.keys.auto_playback_buffer, "", false, false)
-            ll_set_session_value(m.localytics.keys.auto_playback_buffer_start, "", false, false)
-            ll_set_session_value(m.localytics.keys.auto_playback_watched, "", false, false)
-            ll_set_session_value(m.localytics.keys.auto_playback_paused_session, "", false, false)
-            'Attempt to fire player metrics
-            ll_send_player_metrics()
-
-'        else if event.isStreamSegmentInfo()
-'            ll_debug_log("ll_process_player_metrics(Type: isStreamSegmentInfo, Index: " + event.GetIndex().ToStr() + ", SegUrl: " + event.GetInfo()["SegUrl"] + ")")
-'        else if event.isStatusMessage()
-'            ll_debug_log("ll_process_player_metrics(Type: isStatusMessage, Message: " + event.GetMessage() + ")")
-'        else
-'            ll_debug_log("ll_process_player_metrics(Type: unexpected type)")
+          ll_write_registry(m.localytics.keys.auto_playback_current_time, position.ToStr(), true, sectionName)
+        else if state = "stopped" then
+          ll_write_registry(m.localytics.keys.auto_playback_end_reason, m.localytics.constants.finish_reason_user_exited, true, sectionName)
+          'Attempt to fire player metrics
+          ll_send_player_metrics()
+        else if state = "finished" then
+          ll_write_registry(m.localytics.keys.auto_playback_end_reason, m.localytics.constants.finish_reason_playback_ended, true, sectionName)
+          'Attempt to fire player metrics
+          ll_send_player_metrics()
         end if
         ll_debug_log("ll_process_player_metrics(" + message + ")")
     end if
@@ -494,16 +404,12 @@ Function ll_send_player_metrics()
     if ll_read_registry(m.localytics.keys.auto_playback_pending, "false", playback_section) = "true" then
         attributes = CreateObject("roAssociativeArray")
 
-        ' Required metadata fields
-        attributes[m.localytics.constants.content_id] = m.localytics.constants.not_available
-        attributes[m.localytics.constants.content_title] = m.localytics.constants.not_available
-        attributes[m.localytics.constants.content_series_title] = m.localytics.constants.not_available
-        attributes[m.localytics.constants.content_category] = m.localytics.constants.not_available
-
         ' Process metadata
         metadata_section= CreateObject("roRegistrySection", m.localytics.constants.section_metadata)
         for each key in metadata_section.GetKeyList()
+          if (key <> "metadataTime") then
             attributes[key] = metadata_section.Read(key)
+          end if
         end for
 
         ' Fill Playback Data
@@ -972,7 +878,7 @@ Function ll_read_registry(key As String, default="" As String, section="com.loca
     return default
 End Function
 
-Function ll_read_registry_bool(key As String, default="" As String, section="com.localytics" As String) As Boolean
+Function ll_read_registry_bool(key As String, default="" as String, section="com.localytics" As String) As Boolean
     if ll_read_registry(key, default, section) = "True" then
         return true
     end if
@@ -1029,11 +935,11 @@ End Function
 Function ll_get_session_value(param As String, decimal=false as Boolean, bool=false as Boolean) As Dynamic
     if ll_has_session() AND param <> invalid then
       if decimal then
-        return ll_read_registry_int(param, "", "com.localytics.session")
+        return ll_read_registry_int(param, "", m.localytics.constants.section_session)
       else if bool then
-        return ll_read_registry_bool(param, "", "com.localytics.session")
+        return ll_read_registry_bool(param, "", m.localytics.constants.section_session)
       else
-        return ll_read_registry(param, "", "com.localytics.session")
+        return ll_read_registry(param, "", m.localytics.constants.section_session)
       end if
     end if
 
@@ -1042,7 +948,7 @@ End Function
 
 Function ll_set_session_value(param As String, value As Dynamic, flush=false As Boolean, persist=true As Boolean)
     if ll_has_session() AND param <> invalid AND value <> invalid then
-        ll_write_registry(param, ll_to_string(value), flush, "com.localytics.session")
+        ll_write_registry(param, ll_to_string(value), flush, m.localytics.constants.section_session)
     end if
 End Function
 
