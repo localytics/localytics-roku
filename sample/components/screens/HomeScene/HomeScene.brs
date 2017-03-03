@@ -21,8 +21,6 @@ Function Init()
     m.LocalyticsTask = m.top.findNode("LocalyticsTask")
     m.localyticsTask.observeField("started", "OnLocalyticsTaskStarted")
     m.LocalyticsTask.control = "RUN"
-
-
 End Function
 
 'Helper functions to initialize the task
@@ -56,9 +54,6 @@ Sub OnRowItemSelected()
     m.videoPlayer.content = selectedItem
     m.videoPlayer.control = "play"
     m.videoPlayer.observeField("state", "OnVideoPlayerStateChange")
-
-
-
 End Sub
 
 Sub OnVideoPlayerStateChange()

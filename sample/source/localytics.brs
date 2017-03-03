@@ -31,7 +31,7 @@ Function execLocalyticsLoop()
             if type(msg) = "roSGNodeEvent" then
                 field = msg.getField()
                 data = msg.getData()
-                ? "received change event for " + field
+
                 if field = "event" then
                     if data.name <> invalid then
                         ll_tag_event(data.name, data.attributes)
@@ -364,7 +364,7 @@ Function ll_process_player_metrics()
         message = "Playback state: " + state + ", Position: " + position.ToStr()
         ' If playback is active, make sure to keep the session alive
         if (state = "buffering" or state = "playing" or state = "paused") then
-            'll_keep_session_alive("ll_process_player_metrics")
+            ll_keep_session_alive("ll_process_player_metrics")
         end if
         if state = "error" then
           message = message + ", Message: " + m.localytics.videoPlayer.errorMsg
@@ -399,7 +399,6 @@ Function ll_process_player_metrics()
           'Attempt to fire player metrics
           ll_send_player_metrics()
         end if
-
         ll_debug_log("ll_process_player_metrics(" + message + ")")
     end if
 End Function
