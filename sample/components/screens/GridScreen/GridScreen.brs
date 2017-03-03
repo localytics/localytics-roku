@@ -43,20 +43,6 @@ Sub OnItemFocused()
     itemFocused = m.top.itemFocused
     ? ">> GridScreen > OnItemFocused"; itemFocused
 
-    'Test Localytics events
-    'm.focusCount++
-
-    'safeFireLocalytics("event", {name: "GridScene Item Focused", attributes: { a: 1, b: 2}})
-    'safeFireLocalytics("customDimension", { i: 4, value: "Jeff's Dimension"} )
-    'screenId = m.focusCount MOD 3
-    'safeFireLocalytics("screen", {name: "Test Screen " + screenId.ToStr()})
-    'if (m.focusCount MOD 2 = 0) then
-    ''  safeFireLocalytics("profileAttribute", {scope: "app", key: "rokuTest", value: "App Focus Count" + m.focusCount.ToStr()})
-    ''  safeFireLocalytics("customer", { email: "jlevine@localytics.com", fullName: "Jeff Levine", firstName: "Jeff1", lastName: "Levine1"})
-    'else
-    ''    safeFireLocalytics("profileAttribute", {scope: "org", key: "rokuTest", value: invalid})
-    ''  end if
-
     'When an item gains the key focus, set to a 2-element array,
     'where element 0 contains the index of the focused row,
     'and element 1 contains the index of the focused item in that row.

@@ -1,12 +1,6 @@
-
 Function init()
     m.top.functionName = "execLocalyticsLoop"
 end Function
-
-' TODO: test that session length looks proper
-' test screens
-' push outstanding requests into the registry, and retry if bad response codes
-' add a registry section for persistent data (customer, profile, etc.)
 
 'Runs as a part of LocalyticsTask'
 Function execLocalyticsLoop()
@@ -80,7 +74,7 @@ End Function
 ' Note:
 ' - "fresh" will clear previous stored values
 ' - "debug" will log some messages
-Function initLocalytics(appKey As String, sessionTimeout=10 As Integer, secured=true As Boolean, fresh=false As Boolean, debug=true As Boolean) As Void
+Function initLocalytics(appKey As String, sessionTimeout=1800 As Integer, secured=true As Boolean, fresh=false As Boolean, debug=true As Boolean) As Void
     new_localytics = CreateObject("roAssociativeArray")
     m.localytics = new_localytics
 
@@ -344,7 +338,6 @@ End Function
 Function ll_process_video_metadata(data)
   ll_clear_registry(true,m.localytics.constants.section_metadata)
   for each item in data.items()
-      print item.key, item.value
       ll_write_registry_dyn(item.key, item.value, false, m.localytics.constants.section_metadata)
   end for
   ll_write_registry_dyn("metadataTime", ll_get_timestamp_generator(), true, m.localytics.constants.section_metadata)
