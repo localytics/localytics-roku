@@ -79,7 +79,7 @@ Function initLocalytics(appKey As String, sessionTimeout=1800 As Integer, secure
     m.localytics = new_localytics
 
     new_localytics.debug = debug 'Extra loggin on/off
-    new_localytics.libraryVersion = "roku_3.0.0"
+    new_localytics.libraryVersion = "roku_4.0.0"
 
     ll_debug_log("init Localytics: "+appKey)
 
