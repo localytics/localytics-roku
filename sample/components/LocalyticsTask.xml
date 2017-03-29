@@ -14,31 +14,19 @@
  - event on the network.
  -
  -->
-<component name="LocalyticsTask" extends="Task" >
+<component name="LocalyticsTask" extends="Task">
 
 <script type="text/brightscript" uri="pkg:/source/localytics.brs"/>
   <interface>
-    <!-- read only field to inidicate when the task has started and is ready to listen to events -->
-    <field id="started" type="bool"/>
+    <!-- Localytics configuration fields - read only on startup -->
+    <field id="appKey" type="string" value="248e08688d5f4e2e19b6ead-14de4cd2-e974-11e6-8a2a-0021f941005d"/>
+    <field id="sessionTimeout" type="int" value="1800"/>
+    <field id="debug" type="bool" value="true"/>
+    <field id="secured" type="bool" value="true"/>
 
-    <!--
-      -
-      -  event should contain:
-      -   {
-      -     name: <required>
-      -     attributes: <optional>
-      -   }
-      -
-      -->
+    <!-- read only field to indicate when the task has started and is ready to listen to events -->
+    <field id="started" type="bool"/>
     <field id="event" type="assocarray"/>
-    <!--
-      -
-      -  screen should contain:
-      -   {
-      -     name: <required>
-      -   }
-      -
-      -->
     <field id="screen" type="assocarray"/>
     <field id="customer" type="assocarray"/>
     <field id="profileAttribute" type="assocarray"/>
@@ -46,4 +34,5 @@
     <field id="videoNode" type="node"/>
     <field id="videoMetaData" type="assocarray"/>
   </interface>
+
 </component>

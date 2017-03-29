@@ -28,6 +28,7 @@ End Function
 Sub OnLocalyticsTaskStarted()
   'Send task to all children
   m.GridScreen.localyticsTask = m.LocalyticsTask
+
   'Fire any events for the start of the scene
   m.LocalyticsTask.event = {name: "HomeScene Init"}
   m.LocalyticsTask.customer = {id: "myCustomerId"}
