@@ -3,7 +3,7 @@ Function init()
 end Function
 
 'Runs as a part of LocalyticsTask'
-Function execLocalyticsLoop()
+Function execLocalyticsLoop() as Void
     port = CreateObject("roMessagePort")
     m.top.observeField("event", port)
     m.top.observeField("screen", port)
@@ -13,7 +13,24 @@ Function execLocalyticsLoop()
     m.top.observeField("videoNode", port)
     m.top.observeField("videoMetaData", port)
 
-    ll_restore_context()
+    appKey = m.top.appKey
+    secured = m.top.secured
+    sessionTimeout = m.top.sessionTimeout
+    debug = m.top.debug
+    if (appKey = Invalid) then
+      print "ERROR: *** Required Localytics app key is not set - exiting LocalyticsTask ***"
+      return
+    end if
+    if (debug = Invalid) then
+      debug = false
+    end if
+    if (secured = Invalid) then
+      secured = true
+    end if
+    if (sessionTimeout = Invalid) then
+      sessionTimeout = 1800
+    end if
+    initLocalytics(appKey, sessionTimeout, secured, false, debug)
 
     ll_debug_log("execLocalyticsLoop")
     m.top.started = true
@@ -79,7 +96,7 @@ Function initLocalytics(appKey As String, sessionTimeout=1800 As Integer, secure
     m.localytics = new_localytics
 
     new_localytics.debug = debug 'Extra loggin on/off
-    new_localytics.libraryVersion = "roku_4.0.0"
+    new_localytics.libraryVersion = "roku_4.0.1"
 
     ll_debug_log("init Localytics: "+appKey)
 
@@ -104,26 +121,6 @@ Function initLocalytics(appKey As String, sessionTimeout=1800 As Integer, secure
         ll_delete_session_data()
     end if
 
-    'persist the interesting bits
-    ll_write_registry("appKey", appKey, false)
-    ll_write_registry_dyn("sessionTimeout", sessionTimeout, false)
-    ll_write_registry_dyn("secured", debug, false)
-    ll_write_registry_dyn("debug", debug, true)
-End Function
-
-'restore the local m.localytics array, then restore any session data
-Function ll_restore_context()
-  if m.localytics = invalid then
-    appKey = ll_read_registry("appKey")
-    sessionTimeout = ll_read_registry_int("sessionTimeout", "1800")
-    secured = ll_read_registry_bool("secured", "True")
-    debug = ll_read_registry_bool("debug", "False")
-    initLocalytics(appKey, sessionTimeout, secured, false, debug)
-    ll_debug_log("ll_restore_context")
-    ll_initialize_session()
-  else
-    ll_debug_log("ll_restore_context: already restored")
-  end if
 End Function
 
 'Initializes the session

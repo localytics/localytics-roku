@@ -18,27 +18,15 @@
 
 <script type="text/brightscript" uri="pkg:/source/localytics.brs"/>
   <interface>
+    <!-- Localytics configuration fields - read only on startup -->
+    <field id="appKey" type="string" value="248e08688d5f4e2e19b6ead-14de4cd2-e974-11e6-8a2a-0021f941005d"/>
+    <field id="sessionTimeout" type="int" value="1800"/>
+    <field id="debug" type="bool" value="true"/>
+    <field id="secured" type="bool" value="true"/>
+
     <!-- read only field to inidicate when the task has started and is ready to listen to events -->
     <field id="started" type="bool"/>
-
-    <!--
-      -
-      -  event should contain:
-      -   {
-      -     name: <required>
-      -     attributes: <optional>
-      -   }
-      -
-      -->
     <field id="event" type="assocarray"/>
-    <!--
-      -
-      -  screen should contain:
-      -   {
-      -     name: <required>
-      -   }
-      -
-      -->
     <field id="screen" type="assocarray"/>
     <field id="customer" type="assocarray"/>
     <field id="profileAttribute" type="assocarray"/>
