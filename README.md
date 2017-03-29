@@ -52,11 +52,11 @@ Then, we can tag our event:
 safeFireLocalytics("event", {name: "GridScene Item Focused", attributes: { a: 1, b: 2}})
 ```
 
-### Initialization (only available from main.brs)
-*initLocalytics(appKey As String, sessionTimeout=1800 As Integer, secured=true As Boolean) as Object*
+### Initialization (fields set on the LocalyticsTask component XML)
 * appKey: your App Key
 * sessionTimeout (optional): Timeout period, # of seconds of inactivity before considering a new session.
 * secured (optional): The sdk will communicate with Localytics over HTTPS if `secured=true`. Setting this to `false` is only recommended for development/testing purpose, e.g. it may be easier to set up proxy and network debug tools over HTTP on Roku.
+* debug (optional): If true, debug logging will be enabled.
 
 ###Set Profile Information
 *ll_set_customer_id(value As String)*
