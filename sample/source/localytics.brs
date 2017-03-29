@@ -13,13 +13,12 @@ Function execLocalyticsLoop() as Void
     m.top.observeField("videoNode", port)
     m.top.observeField("videoMetaData", port)
 
-    ? "Testing reading appKey"
     appKey = m.top.appKey
     secured = m.top.secured
     sessionTimeout = m.top.sessionTimeout
     debug = m.top.debug
     if (appKey = Invalid) then
-      ll_debug_log("Required Localytics app key is not set - exiting")
+      print "ERROR: *** Required Localytics app key is not set - exiting LocalyticsTask ***"
       return
     end if
     if (debug = Invalid) then
@@ -31,7 +30,6 @@ Function execLocalyticsLoop() as Void
     if (sessionTimeout = Invalid) then
       sessionTimeout = 1800
     end if
-    ? "App key: "+appKey+" debug: "+ll_to_string(debug)+" secured: "+ll_to_string(secured)+" timeout: "+ll_to_string(sessionTimeout)
     initLocalytics(appKey, sessionTimeout, secured, false, debug)
 
     ll_debug_log("execLocalyticsLoop")
@@ -93,21 +91,12 @@ End Function
 ' Note:
 ' - "fresh" will clear previous stored values
 ' - "debug" will log some messages
-<<<<<<< Updated upstream
 Function initLocalytics(appKey As String, sessionTimeout=1800 As Integer, secured=true As Boolean, fresh=false As Boolean, debug=true As Boolean) As Void
-=======
-Function initLocalytics(appKey As String, sessionTimeout=10 As Integer, secured=true As Boolean, fresh=false As Boolean, debug=true As Boolean) As Void
-    ? "debug is " + ll_to_string(debug)
->>>>>>> Stashed changes
     new_localytics = CreateObject("roAssociativeArray")
     m.localytics = new_localytics
 
     new_localytics.debug = debug 'Extra loggin on/off
-<<<<<<< Updated upstream
-    new_localytics.libraryVersion = "roku_4.0.0"
-=======
     new_localytics.libraryVersion = "roku_4.0.1"
->>>>>>> Stashed changes
 
     ll_debug_log("init Localytics: "+appKey)
 

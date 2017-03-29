@@ -14,7 +14,7 @@
  - event on the network.
  -
  -->
-<component name="LocalyticsTask" extends="Task">
+<component name="LocalyticsTask" extends="Task" >
 
 <script type="text/brightscript" uri="pkg:/source/localytics.brs"/>
   <interface>
@@ -24,7 +24,7 @@
     <field id="debug" type="bool" value="true"/>
     <field id="secured" type="bool" value="true"/>
 
-    <!-- read only field to indicate when the task has started and is ready to listen to events -->
+    <!-- read only field to inidicate when the task has started and is ready to listen to events -->
     <field id="started" type="bool"/>
     <field id="event" type="assocarray"/>
     <field id="screen" type="assocarray"/>
@@ -34,5 +34,4 @@
     <field id="videoNode" type="node"/>
     <field id="videoMetaData" type="assocarray"/>
   </interface>
-
 </component>
