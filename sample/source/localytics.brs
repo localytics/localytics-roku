@@ -30,7 +30,7 @@ Function execLocalyticsLoop() as Void
     if (sessionTimeout = Invalid) then
       sessionTimeout = 1800
     end if
-    initLocalytics(appKey, sessionTimeout, secured, true, debug)
+    initLocalytics(appKey, sessionTimeout, secured, false, debug)
 
     ll_debug_log("execLocalyticsLoop")
     m.top.started = true
