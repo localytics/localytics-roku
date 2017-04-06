@@ -96,7 +96,7 @@ Function initLocalytics(appKey As String, sessionTimeout=1800 As Integer, secure
     m.localytics = new_localytics
 
     new_localytics.debug = debug 'Extra loggin on/off
-    new_localytics.libraryVersion = "roku_4.0.1"
+    new_localytics.libraryVersion = "roku_4.0.2"
 
     ll_debug_log("init Localytics: "+appKey)
 
@@ -121,6 +121,7 @@ Function initLocalytics(appKey As String, sessionTimeout=1800 As Integer, secure
         ll_delete_session_data()
     end if
 
+    ll_initialize_session()
 End Function
 
 'Initializes the session
@@ -266,6 +267,10 @@ End Function
 
 Function ll_tag_screen(name as String)
     ll_debug_log("ll_tag_screen()")
+    if ll_has_session() = false then
+        ll_debug_log("Localytics tag screen failed: no session")
+        return -1
+    end if
     ll_check_session_timeout()
     ll_keep_session_alive("ll_tag_screen")
 
@@ -463,6 +468,7 @@ End Function
 Function ll_check_session_timeout(isInit=false as Boolean)
     currentTime = ll_get_timestamp_generator().asSeconds()
     lastActionTime = ll_get_session_value(m.localytics.keys.session_action_time, true)
+    ll_debug_log("********* lastActionTime("+ lastActionTime.toStr() + ")")
     diff = currentTime-lastActionTime
 
     ll_debug_log("ll_check_session_timeout("+ m.localytics.sessionTimeout.toStr() +"): Inactive for " + diff.toStr())
@@ -940,7 +946,13 @@ Function ll_get_session_value(param As String, decimal=false as Boolean, bool=fa
       end if
     end if
 
-    return ""
+    ' Return type senstive defaults
+    if decimal then
+      return -1
+    else if bool then
+      return false
+    else
+      return ""
 End Function
 
 Function ll_set_session_value(param As String, value As Dynamic, flush=false As Boolean, persist=true As Boolean)
