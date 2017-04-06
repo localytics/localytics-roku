@@ -946,13 +946,14 @@ Function ll_get_session_value(param As String, decimal=false as Boolean, bool=fa
       end if
     end if
 
-    ' Return type senstive defaults
+    ' Return type sensitive defaults
     if decimal then
       return -1
     else if bool then
       return false
     else
       return ""
+    end if
 End Function
 
 Function ll_set_session_value(param As String, value As Dynamic, flush=false As Boolean, persist=true As Boolean)
