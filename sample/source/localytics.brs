@@ -30,7 +30,7 @@ Function execLocalyticsLoop() as Void
     if (sessionTimeout = Invalid) then
       sessionTimeout = 1800
     end if
-    initLocalytics(appKey, sessionTimeout, secured, false, debug)
+    initLocalytics(appKey, sessionTimeout, secured, true, debug)
 
     ll_debug_log("execLocalyticsLoop")
     m.top.started = true
@@ -468,7 +468,6 @@ End Function
 Function ll_check_session_timeout(isInit=false as Boolean)
     currentTime = ll_get_timestamp_generator().asSeconds()
     lastActionTime = ll_get_session_value(m.localytics.keys.session_action_time, true)
-    ll_debug_log("********* lastActionTime("+ lastActionTime.toStr() + ")")
     diff = currentTime-lastActionTime
 
     ll_debug_log("ll_check_session_timeout("+ m.localytics.sessionTimeout.toStr() +"): Inactive for " + diff.toStr())
