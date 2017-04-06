@@ -30,6 +30,7 @@ Sub OnLocalyticsTaskStarted()
   m.GridScreen.localyticsTask = m.LocalyticsTask
   'Fire any events for the start of the scene
   m.LocalyticsTask.event = {name: "HomeScene Init"}
+  m.LocalyticsTask.screen = {name: "HomeScene"}
   m.LocalyticsTask.customer = {id: "myCustomerId"}
 End Sub
 
