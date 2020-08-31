@@ -17,6 +17,7 @@ Function execLocalyticsLoop() as Void
     secured = m.top.secured
     sessionTimeout = m.top.sessionTimeout
     debug = m.top.debug
+    persist = m.top.persist
     if (appKey = Invalid) then
       print "ERROR: *** Required Localytics app key is not set - exiting LocalyticsTask ***"
       return
@@ -30,7 +31,7 @@ Function execLocalyticsLoop() as Void
     if (sessionTimeout = Invalid) then
       sessionTimeout = 1800
     end if
-    initLocalytics(appKey, sessionTimeout, secured, false, debug)
+    initLocalytics(appKey, sessionTimeout, secured, false, debug, persist)
 
     ll_debug_log("execLocalyticsLoop")
     m.top.started = true
@@ -91,12 +92,12 @@ End Function
 ' Note:
 ' - "fresh" will clear previous stored values
 ' - "debug" will log some messages
-Function initLocalytics(appKey As String, sessionTimeout=1800 As Integer, secured=true As Boolean, fresh=false As Boolean, debug=true As Boolean) As Void
+Function initLocalytics(appKey As String, sessionTimeout=1800 As Integer, secured=true As Boolean, fresh=false As Boolean, debug=true As Boolean, persist=true as Boolean) As Void
     new_localytics = CreateObject("roAssociativeArray")
     m.localytics = new_localytics
 
     new_localytics.debug = debug 'Extra loggin on/off
-    new_localytics.libraryVersion = "roku_4.0.2"
+    new_localytics.libraryVersion = "roku_4.1.0"
 
     ll_debug_log("init Localytics: "+appKey)
 
@@ -112,6 +113,12 @@ Function initLocalytics(appKey As String, sessionTimeout=1800 As Integer, secure
     new_localytics.appKey = appKey
     new_localytics.sessionTimeout = sessionTimeout
     new_localytics.outstandingRequests = CreateObject("roAssociativeArray") ' Volatile Store for roUrlTransfer response
+    new_localytics.inMemoryCache = CreateObject("roAssociativeArray")
+    new_localytics.inMemoryCache["com.localytics"] = CreateObject("roAssociativeArray")
+    new_localytics.inMemoryCache[constants.section_metadata] = CreateObject("roAssociativeArray")
+    new_localytics.inMemoryCache[constants.section_session] = CreateObject("roAssociativeArray")
+    new_localytics.inMemoryCache[constants.section_playback] = CreateObject("roAssociativeArray")
+    new_localytics.persistData = persist
     new_localytics.customDimensions = ll_load_custom_dimensions()
     new_localytics.maxScreenFlowLength = 2500
     new_localytics.keys = ll_get_storage_keys()
@@ -222,13 +229,19 @@ Function ll_close_session(isInit=false as Boolean)
 End Function
 
 Function ll_delete_session_data()
-    sec = CreateObject("roRegistrySection", m.localytics.constants.section_session)
+    if m.localytics.persistData then 
+        sec = CreateObject("roRegistrySection", m.localytics.constants.section_session)
 
-    for each key in sec.GetKeyList()
-      sec.Delete(key)
-    next
+        for each key in sec.GetKeyList()
+          sec.Delete(key)
+        next
 
-    sec.Flush()
+        sec.Flush()
+    else then
+        for each key in m.loocalytics.inMemorySessionCache[m.localytics.constants.section_session]
+            m.localytics.inMemoryCache[m.localytics.constants.section_session][key] = ""
+        next
+    end if
 End Function
 
 ' Tags an event
@@ -407,12 +420,21 @@ Function ll_send_player_metrics()
         attributes = CreateObject("roAssociativeArray")
 
         ' Process metadata
-        metadata_section= CreateObject("roRegistrySection", m.localytics.constants.section_metadata)
-        for each key in metadata_section.GetKeyList()
-          if (key <> "metadataTime") then
-            attributes[key] = metadata_section.Read(key)
-          end if
-        end for
+        if m.localytics.persistData then
+            metadata_section= CreateObject("roRegistrySection", m.localytics.constants.section_metadata)
+            for each key in metadata_section.GetKeyList()
+              if (key <> "metadataTime") then
+                attributes[key] = metadata_section.Read(key)
+              end if
+            end for
+        else
+            metadata_section = m.localytics.inMemoryCache[m.localytics.constants.section_metadata]
+            for each key in metadata_section then
+                if (key <> "metadataTime") then
+                    attributes[key] = metadata_section[key]
+                end if
+            end for
+        end if
 
         ' Fill Playback Data
         contentUrl = ll_read_registry(m.localytics.keys.auto_playback_url, m.localytics.constants.not_available, playback_section)
@@ -872,11 +894,18 @@ End Function
 
 ' Reads from "key" of registry "section". If value doesn't exist, "default" will be used
 Function ll_read_registry(key As String, default="" As String, section="com.localytics" As String) As String
-    sec = CreateObject("roRegistrySection", section)
-    if sec.Exists(key) then
-        return sec.Read(key)
+    if m.localytics.persistData then 
+        sec = CreateObject("roRegistrySection", section)
+        if sec.Exists(key) then
+            return sec.Read(key)
+        end if
+        ll_write_registry(key, default, false, section)
+    else then
+        if m.localytics.inMemoryCache[section].DoesExist(key) then
+            return m.localytics.inMemoryCache[section][key]
+        end if
+        m.localytics.inMemoryCache[section][key] = default
     end if
-    ll_write_registry(key, default, false, section)
     return default
 End Function
 
@@ -898,33 +927,47 @@ End Function
 
 ' Writes "value" to "key" of registry "section". "flush" = false will skip calling Flush(), ideal for multiple writes
 Function ll_write_registry(key As String, value As String, flush=true As Boolean, section="com.localytics" As String)
-    sec = CreateObject("roRegistrySection", section)
-    sec.Write(key, value)
+    if m.localytics.persistData then 
+        sec = CreateObject("roRegistrySection", section)
+        sec.Write(key, value)
 
-    if flush then
-        sec.Flush()
+        if flush then
+            sec.Flush()
+        end if
+    else then
+        m.localytics.inMemoryCache[section][key] = value
     end if
 End Function
 
 ' Deletes "key" of registry "section". "flush" = false will skip calling Flush(), ideal for multiple deletes
 Function ll_delete_registry(key As String, section="com.localytics" As String, flush=true As Boolean)
-    sec = CreateObject("roRegistrySection", section)
-    sec.Delete(key)
+    if m.localytics.persistData then 
+        sec = CreateObject("roRegistrySection", section)
+        sec.Delete(key)
 
-    if flush then
-        sec.Flush()
+        if flush then
+            sec.Flush()
+        end if
+    else then
+        m.localytics.inMemoryCache[section][key] = "" 
     end if
 End Function
 
 ' Writes "value" to "key" of registry "section". "flush" = false will skip calling Flush(), ideal for multiple writes
 Function ll_clear_registry(flush=true As Boolean, section="com.localytics" As String)
-    sec = CreateObject("roRegistrySection", section)
+    if m.localytics.persistData then 
+        sec = CreateObject("roRegistrySection", section)
 
-    for each key in sec.GetKeyList()
-        sec.Delete(key)
-    next
+        for each key in sec.GetKeyList()
+            sec.Delete(key)
+        next
 
-    sec.Flush()
+        sec.Flush()
+    else then
+        for each key in m.loocalytics.inMemoryCache[section]
+            m.localytics.inMemoryCache[section][key] = ""
+        next
+    end if
 End Function
 
 ' True if the instance has been initialized
