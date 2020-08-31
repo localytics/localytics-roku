@@ -238,9 +238,7 @@ Function ll_delete_session_data()
 
         sec.Flush()
     else then
-        for each key in m.loocalytics.inMemorySessionCache[m.localytics.constants.section_session]
-            m.localytics.inMemoryCache[m.localytics.constants.section_session].Delete(key)
-        next
+        m.localytics.inMemoryCache[m.localytics.constants.section_session].Clear()
     end if
 End Function
 
@@ -964,9 +962,7 @@ Function ll_clear_registry(flush=true As Boolean, section="com.localytics" As St
 
         sec.Flush()
     else then
-        for each key in m.loocalytics.inMemoryCache[section]
-            m.localytics.inMemoryCache[section].Delete(key)
-        next
+        m.localytics.inMemoryCache[section].Clear()
     end if
 End Function
 
