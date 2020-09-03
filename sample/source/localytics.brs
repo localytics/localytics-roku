@@ -112,17 +112,17 @@ Function initLocalytics(appKey As String, sessionTimeout=1800 As Integer, secure
     new_localytics.profileEndpoint = new_localytics.uriScheme + "://profile.localytics.com/v1/apps/"
     new_localytics.appKey = appKey
     new_localytics.sessionTimeout = sessionTimeout
+    new_localytics.constants = ll_get_constants()
+    new_localytics.keys = ll_get_storage_keys()
     new_localytics.outstandingRequests = CreateObject("roAssociativeArray") ' Volatile Store for roUrlTransfer response
     new_localytics.inMemoryCache = CreateObject("roAssociativeArray")
     new_localytics.inMemoryCache["com.localytics"] = CreateObject("roAssociativeArray")
-    new_localytics.inMemoryCache[constants.section_metadata] = CreateObject("roAssociativeArray")
-    new_localytics.inMemoryCache[constants.section_session] = CreateObject("roAssociativeArray")
-    new_localytics.inMemoryCache[constants.section_playback] = CreateObject("roAssociativeArray")
+    new_localytics.inMemoryCache[new_localytics.constants.section_metadata] = CreateObject("roAssociativeArray")
+    new_localytics.inMemoryCache[new_localytics.constants.section_session] = CreateObject("roAssociativeArray")
+    new_localytics.inMemoryCache[new_localytics.constants.section_playback] = CreateObject("roAssociativeArray")
     new_localytics.persistData = persist
     new_localytics.customDimensions = ll_load_custom_dimensions()
     new_localytics.maxScreenFlowLength = 2500
-    new_localytics.keys = ll_get_storage_keys()
-    new_localytics.constants = ll_get_constants()
 
     if fresh then
         ll_delete_session_data()
@@ -237,8 +237,10 @@ Function ll_delete_session_data()
         next
 
         sec.Flush()
-    else then
-        m.localytics.inMemoryCache[m.localytics.constants.section_session].Clear()
+    else
+        for each key in m.localytics.inMemoryCache[m.localytics.constants.section_session]
+            m.localytics.inMemoryCache[m.localytics.constants.section_session].Delete(key)
+        next
     end if
 End Function
 
@@ -427,7 +429,7 @@ Function ll_send_player_metrics()
             end for
         else
             metadata_section = m.localytics.inMemoryCache[m.localytics.constants.section_metadata]
-            for each key in metadata_section then
+            for each key in metadata_section
                 if (key <> "metadataTime") then
                     attributes[key] = metadata_section[key]
                 end if
@@ -898,7 +900,7 @@ Function ll_read_registry(key As String, default="" As String, section="com.loca
             return sec.Read(key)
         end if
         ll_write_registry(key, default, false, section)
-    else then
+    else
         if m.localytics.inMemoryCache[section].DoesExist(key) then
             return m.localytics.inMemoryCache[section][key]
         end if
@@ -932,7 +934,7 @@ Function ll_write_registry(key As String, value As String, flush=true As Boolean
         if flush then
             sec.Flush()
         end if
-    else then
+    else
         m.localytics.inMemoryCache[section][key] = value
     end if
 End Function
@@ -946,7 +948,7 @@ Function ll_delete_registry(key As String, section="com.localytics" As String, f
         if flush then
             sec.Flush()
         end if
-    else then
+    else
         m.localytics.inMemoryCache[section].Delete(key)
     end if
 End Function
@@ -961,8 +963,10 @@ Function ll_clear_registry(flush=true As Boolean, section="com.localytics" As St
         next
 
         sec.Flush()
-    else then
-        m.localytics.inMemoryCache[section].Clear()
+    else
+        for each key in m.localytics.inMemoryCache[section]
+            m.localytics.inMemoryCache[section].Delete(key)
+        next
     end if
 End Function
 
