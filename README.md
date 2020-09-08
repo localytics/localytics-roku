@@ -56,6 +56,7 @@ safeFireLocalytics("event", {name: "GridScene Item Focused", attributes: { a: 1,
 * appKey: your App Key
 * sessionTimeout (optional): Timeout period, # of seconds of inactivity before considering a new session.
 * secured (optional): The sdk will communicate with Localytics over HTTPS if `secured=true`. Setting this to `false` is only recommended for development/testing purpose, e.g. it may be easier to set up proxy and network debug tools over HTTP on Roku.
+* persist (optional): If true (the default) the SDK will use device registry to store values. If false, all variables will be stored in memory.
 * debug (optional): If true, debug logging will be enabled.
 
 ###Set Profile Information

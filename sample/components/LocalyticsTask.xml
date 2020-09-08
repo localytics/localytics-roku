@@ -23,6 +23,7 @@
     <field id="sessionTimeout" type="int" value="1800"/>
     <field id="debug" type="bool" value="true"/>
     <field id="secured" type="bool" value="true"/>
+    <field id="persist" type="bool" value="false"/>
 
     <!-- read only field to inidicate when the task has started and is ready to listen to events -->
     <field id="started" type="bool"/>
